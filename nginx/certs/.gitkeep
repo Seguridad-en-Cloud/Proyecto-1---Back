@@ -1,8 +1,0 @@
-# Placeholder for SSL certificates
-# Generate self-signed certificates using:
-# openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-#   -keyout server.key -out server.crt \
-#   -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
-
-This file is a placeholder. Please generate SSL certificates before running docker-compose.
-See README.md for instructions.
