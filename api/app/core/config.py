@@ -13,6 +13,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        env_parse_none_str="",  # Don't try to parse empty strings
     )
 
     # App settings
@@ -21,14 +22,14 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, alias="DEBUG")
     
     # CORS settings
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"],
+    cors_origins: str | list[str] = Field(
+        default="http://localhost:3000,http://localhost:5173",
         alias="CORS_ORIGINS"
     )
     
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins", mode="after")
     @classmethod
-    def parse_cors_origins(cls, v: Any) -> list[str]:
+    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
         """Parse CORS origins from comma-separated string or list."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]

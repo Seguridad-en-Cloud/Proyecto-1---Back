@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ restaurant_name }} - Menú</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 20px;
+            border: 4px solid white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .restaurant-name {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .restaurant-description {
+            font-size: 1.1em;
+            opacity: 0.95;
+            margin-bottom: 20px;
+        }
+
+        .restaurant-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            font-size: 0.95em;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .category {
+            margin-bottom: 50px;
+        }
+
+        .category-header {
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        .category-name {
+            font-size: 2em;
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .category-description {
+            color: #666;
+            font-size: 1em;
+        }
+
+        .dishes {
+            display: grid;
+            gap: 25px;
+        }
+
+        .dish {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+
+        .dish:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .dish.featured {
+            background: linear-gradient(135deg, #fff5e6 0%, #ffe6cc 100%);
+            border: 2px solid #ff9933;
+        }
+
+        .dish-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .dish-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dish-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+
+        .dish-name {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .dish-price {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .price {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .sale-badge {
+            background: #ff4444;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        .dish-description {
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .tag {
+            background: #f0f0f0;
+            color: #555;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+        }
+
+        .featured-badge {
+            background: linear-gradient(135deg, #ff9933 0%, #ff6600 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(255, 102, 0, 0.3);
+        }
+
+        .no-dishes {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-size: 1.1em;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            color: #666;
+            border-top: 1px solid #e9ecef;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .header {
+                padding: 30px 20px;
+            }
+
+            .restaurant-name {
+                font-size: 1.8em;
+            }
+
+            .content {
+                padding: 25px 20px;
+            }
+
+            .dish {
+                flex-direction: column;
+            }
+
+            .dish-image {
+                width: 100%;
+                height: 200px;
+            }
+
+            .dish-header {
+                flex-direction: column;
+                align-items: start;
+            }
+
+            .dish-price {
+                align-items: flex-start;
+            }
+
+            .restaurant-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {% if logo_url %}
+            <img src="{{ logo_url }}" alt="{{ restaurant_name }}" class="logo">
+            {% endif %}
+            <h1 class="restaurant-name">{{ restaurant_name }}</h1>
+            {% if description %}
+            <p class="restaurant-description">{{ description }}</p>
+            {% endif %}
+            <div class="restaurant-info">
+                {% if phone %}
+                <div class="info-item">
+                    <span>📞</span>
+                    <span>{{ phone }}</span>
+                </div>
+                {% endif %}
+                {% if address %}
+                <div class="info-item">
+                    <span>📍</span>
+                    <span>{{ address }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="content">
+            {% if categories %}
+                {% for category in categories %}
+                <div class="category">
+                    <div class="category-header">
+                        <h2 class="category-name">{{ category.name }}</h2>
+                        {% if category.description %}
+                        <p class="category-description">{{ category.description }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="dishes">
+                        {% for dish in category.dishes %}
+                        <div class="dish {% if dish.featured %}featured{% endif %}">
+                            {% if dish.image_url %}
+                            <img src="{{ dish.image_url }}" alt="{{ dish.name }}" class="dish-image">
+                            {% endif %}
+                            <div class="dish-info">
+                                <div class="dish-header">
+                                    <h3 class="dish-name">{{ dish.name }}</h3>
+                                    <div class="dish-price">
+                                        {% if dish.sale_price %}
+                                        <span class="sale-badge">OFERTA</span>
+                                        <span class="original-price">${{ "%.2f"|format(dish.price) }}</span>
+                                        <span class="price">${{ "%.2f"|format(dish.sale_price) }}</span>
+                                        {% else %}
+                                        <span class="price">${{ "%.2f"|format(dish.price) }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if dish.description %}
+                                <p class="dish-description">{{ dish.description }}</p>
+                                {% endif %}
+                                {% if dish.tags or dish.featured %}
+                                <div class="tags">
+                                    {% if dish.featured %}
+                                    <span class="featured-badge">⭐ Destacado</span>
+                                    {% endif %}
+                                    {% if dish.tags %}
+                                        {% for tag in dish.tags %}
+                                        <span class="tag">{{ tag }}</span>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="no-dishes">
+                <p>🍽️ No hay platos disponibles en este momento.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="footer">
+            <p>Powered by LiveMenu 🍴</p>
+        </div>
+    </div>
+</body>
+</html>

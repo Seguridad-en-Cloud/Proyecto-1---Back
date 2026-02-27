@@ -11,6 +11,8 @@ cp .env.example .env
 ```
 
 ### 2. Levantar servicios
+
+Ejecutar docker en la máquina y después: 
 ```bash
 make up
 # o manualmente:

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.routers import analytics, auth, categories, dishes, menu, restaurant
+from app.api.routers import analytics, auth, categories, dishes, menu, menu_public, restaurant
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware.errors import (
@@ -52,6 +52,7 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # Include routers
+app.include_router(menu_public.router)  # No prefix - public route /m/:slug
 app.include_router(auth.router)
 app.include_router(restaurant.router)
 app.include_router(categories.router)

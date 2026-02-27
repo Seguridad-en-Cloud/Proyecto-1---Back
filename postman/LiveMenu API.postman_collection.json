@@ -361,6 +361,19 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Get HTML Menu",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [
