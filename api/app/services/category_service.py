@@ -4,6 +4,7 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_invalidate_prefix
 from app.models.category import Category
 from app.repositories.category_repo import CategoryRepository
 from app.repositories.restaurant_repo import RestaurantRepository
@@ -91,12 +92,14 @@ class CategoryService:
                 detail="Restaurant not found",
             )
         
-        return await self.repo.create(
+        category = await self.repo.create(
             restaurant_id=restaurant.id,
             name=data.name,
             description=data.description,
             active=data.active,
         )
+        cache_invalidate_prefix("menu:")
+        return category
     
     async def update(
         self,
@@ -129,7 +132,9 @@ class CategoryService:
         await self._verify_restaurant_ownership(category.restaurant_id, owner_user_id)
         
         update_data = data.model_dump(exclude_unset=True)
-        return await self.repo.update(category, **update_data)
+        result = await self.repo.update(category, **update_data)
+        cache_invalidate_prefix("menu:")
+        return result
     
     async def delete(
         self, 
@@ -164,6 +169,7 @@ class CategoryService:
             )
         
         await self.repo.delete(category)
+        cache_invalidate_prefix("menu:")
     
     async def reorder(
         self,
@@ -197,3 +203,4 @@ class CategoryService:
                 )
         
         await self.repo.reorder_categories(restaurant.id, ordered_ids)
+        cache_invalidate_prefix("menu:")

@@ -1,27 +1,11 @@
 {
   "info": {
+    "_postman_id": "e5d3d2ae-9d47-434f-b9ba-fbfc0eb877b7",
     "name": "LiveMenu API",
+    "description": "Collection for local dev over HTTPS. Disable SSL verification in Postman settings for self-signed certs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Collection for local dev over HTTPS. Disable SSL verification in Postman settings for self-signed certs."
+    "_exporter_id": "29349243"
   },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "https://localhost"
-    },
-    {
-      "key": "access_token",
-      "value": ""
-    },
-    {
-      "key": "refresh_token",
-      "value": ""
-    },
-    {
-      "key": "category_id",
-      "value": ""
-    }
-  ],
   "item": [
     {
       "name": "Auth",
@@ -33,10 +17,18 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/health",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "health"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "health"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Register",
@@ -54,10 +46,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/register",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "register"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Login",
@@ -90,10 +90,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Refresh",
@@ -126,10 +134,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/refresh",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "refresh"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Logout",
@@ -151,10 +167,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
             }
-          }
+          },
+          "response": []
         }
       ]
     },
@@ -181,10 +205,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/restaurant",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "restaurant"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "restaurant"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Create Category",
@@ -220,10 +252,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/categories",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "categories"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "categories"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "Create Dish",
@@ -245,10 +285,18 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/dishes",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "dishes"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "dishes"
+              ]
             }
-          }
+          },
+          "response": []
         },
         {
           "name": "List Dishes",
@@ -262,12 +310,88 @@
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/dishes",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "dishes"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "dishes"
+              ]
             }
-          }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Menu (JSON)",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/menu/mi-restaurante",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "menu",
+                "mi-restaurante"
+              ]
+            }
+          },
+          "response": []
         }
       ]
+    },
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Get HTML Menu",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://localhost"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "category_id",
+      "value": ""
     }
   ]
 }

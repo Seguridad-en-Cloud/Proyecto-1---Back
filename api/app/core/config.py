@@ -13,6 +13,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        env_parse_none_str="",  # Don't try to parse empty strings
     )
 
     # App settings
@@ -21,14 +22,14 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, alias="DEBUG")
     
     # CORS settings
-    cors_origins: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:5173"],
+    cors_origins: str | list[str] = Field(
+        default="http://localhost:3000,http://localhost:5173",
         alias="CORS_ORIGINS"
     )
     
-    @field_validator("cors_origins", mode="before")
+    @field_validator("cors_origins", mode="after")
     @classmethod
-    def parse_cors_origins(cls, v: Any) -> list[str]:
+    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
         """Parse CORS origins from comma-separated string or list."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
@@ -57,6 +58,19 @@ class Settings(BaseSettings):
     
     # API Docs (disable in production)
     enable_docs: bool = Field(default=True, alias="ENABLE_DOCS")
+
+    # S3 / MinIO settings
+    s3_endpoint: str = Field(default="http://minio:9000", alias="S3_ENDPOINT")
+    s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
+    s3_bucket: str = Field(default="livemenu", alias="S3_BUCKET")
+    s3_public_url: str = Field(
+        default="http://localhost:9000/livemenu", alias="S3_PUBLIC_URL"
+    )
+
+    # Image processing
+    image_max_size_mb: int = Field(default=5, alias="IMAGE_MAX_SIZE_MB")
+    image_worker_count: int = Field(default=4, alias="IMAGE_WORKER_COUNT")
 
 
 # Global settings instance

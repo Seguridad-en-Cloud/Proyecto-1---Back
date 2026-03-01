@@ -1,11 +1,22 @@
 """Analytics repository for database operations."""
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.scan_event import ScanEvent
+
+
+def _end_of_day(dt: datetime) -> datetime:
+    """If a datetime has time 00:00:00, advance it to end-of-day (23:59:59.999999).
+
+    This handles the case where the frontend sends a plain date (e.g. '2026-02-28')
+    which FastAPI parses as midnight. We want the filter to include the *entire* day.
+    """
+    if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and dt.microsecond == 0:
+        return dt + timedelta(days=1) - timedelta(microseconds=1)
+    return dt
 
 
 class AnalyticsRepository:
@@ -28,7 +39,7 @@ class AnalyticsRepository:
         if from_date:
             query = query.where(ScanEvent.timestamp >= from_date)
         if to_date:
-            query = query.where(ScanEvent.timestamp <= to_date)
+            query = query.where(ScanEvent.timestamp <= _end_of_day(to_date))
         
         result = await self.session.execute(query)
         return result.scalar_one()
@@ -50,7 +61,7 @@ class AnalyticsRepository:
         if from_date:
             query = query.where(ScanEvent.timestamp >= from_date)
         if to_date:
-            query = query.where(ScanEvent.timestamp <= to_date)
+            query = query.where(ScanEvent.timestamp <= _end_of_day(to_date))
         
         query = query.group_by("period").order_by("period")
         
@@ -74,7 +85,7 @@ class AnalyticsRepository:
         if from_date:
             query = query.where(ScanEvent.timestamp >= from_date)
         if to_date:
-            query = query.where(ScanEvent.timestamp <= to_date)
+            query = query.where(ScanEvent.timestamp <= _end_of_day(to_date))
         
         query = query.group_by("hour").order_by("hour")
         
@@ -99,7 +110,7 @@ class AnalyticsRepository:
         if from_date:
             query = query.where(ScanEvent.timestamp >= from_date)
         if to_date:
-            query = query.where(ScanEvent.timestamp <= to_date)
+            query = query.where(ScanEvent.timestamp <= _end_of_day(to_date))
         
         query = query.group_by(ScanEvent.user_agent)
         query = query.order_by(func.count(ScanEvent.id).desc())
@@ -122,7 +133,7 @@ class AnalyticsRepository:
         if from_date:
             query = query.where(ScanEvent.timestamp >= from_date)
         if to_date:
-            query = query.where(ScanEvent.timestamp <= to_date)
+            query = query.where(ScanEvent.timestamp <= _end_of_day(to_date))
         
         query = query.order_by(ScanEvent.timestamp.desc())
         

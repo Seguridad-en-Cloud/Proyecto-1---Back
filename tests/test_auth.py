@@ -144,3 +144,63 @@ async def test_logout(client: AsyncClient, auth_headers: dict[str, str]):
     )
     
     assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_register_invalid_email(client: AsyncClient):
+    """Test registration with invalid email format."""
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "not-an-email",
+            "password": "password123",
+        },
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_login_wrong_password(client: AsyncClient):
+    """Test login with wrong password for existing user."""
+    # Register user
+    await client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": "wrong@example.com",
+            "password": "password123",
+        },
+    )
+    # Login with wrong password
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={
+            "email": "wrong@example.com",
+            "password": "wrongpassword",
+        },
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_refresh_with_invalid_token(client: AsyncClient):
+    """Test refresh with a garbage token."""
+    response = await client.post(
+        "/api/v1/auth/refresh",
+        json={"refresh_token": "not-a-valid-jwt"},
+    )
+    assert response.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_protected_endpoint_without_token(client: AsyncClient):
+    """Test accessing a protected endpoint without auth."""
+    response = await client.get("/api/v1/admin/restaurant")
+    assert response.status_code in (401, 403)
+
+
+@pytest.mark.asyncio
+async def test_protected_endpoint_with_bad_token(client: AsyncClient):
+    """Test accessing a protected endpoint with invalid token."""
+    headers = {"Authorization": "Bearer invalid.jwt.token"}
+    response = await client.get("/api/v1/admin/restaurant", headers=headers)
+    assert response.status_code == 401

@@ -8,6 +8,10 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
+    curl \
+    libjpeg62-turbo-dev \
+    zlib1g-dev \
+    libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy project files

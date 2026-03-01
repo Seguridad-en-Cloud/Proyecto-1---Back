@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/v1/admin/analytics", tags=["analytics"])
 async def get_analytics(
     user_id: CurrentUserId,
     session: DatabaseSession,
-    granularity: str = Query(default="day", regex="^(day|week|month)$"),
+    granularity: str = Query(default="day", pattern="^(day|week|month)$"),
     from_date: datetime | None = Query(default=None, alias="from"),
     to_date: datetime | None = Query(default=None, alias="to"),
 ):

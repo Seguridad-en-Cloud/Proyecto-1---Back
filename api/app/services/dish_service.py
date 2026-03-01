@@ -5,6 +5,7 @@ from decimal import Decimal
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_invalidate_prefix
 from app.models.dish import Dish
 from app.repositories.category_repo import CategoryRepository
 from app.repositories.dish_repo import DishRepository
@@ -91,6 +92,7 @@ class DishService:
             await self._verify_category_ownership(category_id, owner_user_id)
         
         dishes, total = await self.repo.list_dishes(
+            restaurant_id=restaurant.id,
             category_id=category_id,
             available=available,
             featured=featured,
@@ -159,7 +161,7 @@ class DishService:
         # Verify category ownership
         await self._verify_category_ownership(data.category_id, owner_user_id)
         
-        return await self.repo.create(
+        dish = await self.repo.create(
             category_id=data.category_id,
             name=data.name,
             description=data.description,
@@ -170,6 +172,8 @@ class DishService:
             featured=data.featured,
             tags=data.tags,
         )
+        cache_invalidate_prefix("menu:")
+        return dish
     
     async def update(
         self,
@@ -195,7 +199,9 @@ class DishService:
         if "category_id" in update_data:
             await self._verify_category_ownership(update_data["category_id"], owner_user_id)
         
-        return await self.repo.update(dish, **update_data)
+        result = await self.repo.update(dish, **update_data)
+        cache_invalidate_prefix("menu:")
+        return result
     
     async def delete(
         self, 
@@ -212,7 +218,9 @@ class DishService:
             Deleted dish
         """
         dish = await self.get_dish(dish_id, owner_user_id)
-        return await self.repo.soft_delete(dish)
+        result = await self.repo.soft_delete(dish)
+        cache_invalidate_prefix("menu:")
+        return result
     
     async def toggle_availability(
         self, 
@@ -229,4 +237,6 @@ class DishService:
             Updated dish
         """
         dish = await self.get_dish(dish_id, owner_user_id)
-        return await self.repo.toggle_availability(dish)
+        result = await self.repo.toggle_availability(dish)
+        cache_invalidate_prefix("menu:")
+        return result

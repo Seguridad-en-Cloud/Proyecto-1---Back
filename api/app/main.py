@@ -5,7 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.routers import analytics, auth, categories, dishes, restaurant
+from app.api.routers import (
+    analytics,
+    auth,
+    categories,
+    dishes,
+    menu,
+    menu_public,
+    qr,
+    restaurant,
+    upload,
+)
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware.errors import (
@@ -52,20 +62,29 @@ app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # Include routers
+app.include_router(menu_public.router)  # No prefix - public route /m/:slug
 app.include_router(auth.router)
 app.include_router(restaurant.router)
 app.include_router(categories.router)
 app.include_router(dishes.router)
 app.include_router(analytics.router)
+app.include_router(menu.router)
+app.include_router(upload.router)
+app.include_router(qr.router)
 
 
 @app.on_event("startup")
 async def startup_event():
-    """Startup event handler."""
-    pass
+    """Startup: launch image worker pool and install signal handlers."""
+    from app.services.upload_service import install_signal_handlers, start_workers
+
+    await start_workers()
+    install_signal_handlers()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Shutdown event handler."""
-    pass
+    """Graceful shutdown: drain queue, cancel workers, release pool resources."""
+    from app.services.upload_service import shutdown_workers
+
+    await shutdown_workers()
