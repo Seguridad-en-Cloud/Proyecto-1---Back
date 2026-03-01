@@ -6,6 +6,7 @@ from decimal import Decimal
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.category import Category
 from app.models.dish import Dish
 
 
@@ -61,6 +62,7 @@ class DishRepository:
     
     async def list_dishes(
         self,
+        restaurant_id: uuid.UUID | None = None,
         category_id: uuid.UUID | None = None,
         available: bool | None = None,
         featured: bool | None = None,
@@ -75,6 +77,15 @@ class DishRepository:
         """List dishes with filters and pagination."""
         query = select(Dish)
         count_query = select(func.count(Dish.id))
+        
+        # Filter by restaurant (join through categories)
+        if restaurant_id is not None:
+            query = query.join(Category, Dish.category_id == Category.id).where(
+                Category.restaurant_id == restaurant_id
+            )
+            count_query = count_query.join(Category, Dish.category_id == Category.id).where(
+                Category.restaurant_id == restaurant_id
+            )
         
         # Apply filters
         if not include_deleted:

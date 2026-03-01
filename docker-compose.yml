@@ -4,6 +4,7 @@ services:
   db:
     image: postgres:16-alpine
     container_name: livemenu-db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: livemenu
       POSTGRES_PASSWORD: livemenu
@@ -21,6 +22,7 @@ services:
   api:
     build: .
     container_name: livemenu-api
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
@@ -56,8 +58,10 @@ services:
   nginx:
     image: nginx:alpine
     container_name: livemenu-nginx
+    restart: unless-stopped
     depends_on:
       - api
+      - frontend
     ports:
       - "443:443"
     volumes:
@@ -66,9 +70,19 @@ services:
     networks:
       - backend
 
+  frontend:
+    build:
+      context: ../Proyecto-1---Front
+      dockerfile: Dockerfile
+    container_name: livemenu-frontend
+    networks:
+      - backend
+    restart: unless-stopped
+
   minio:
     image: minio/minio:latest
     container_name: livemenu-minio
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin

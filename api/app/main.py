@@ -75,14 +75,16 @@ app.include_router(qr.router)
 
 @app.on_event("startup")
 async def startup_event():
-    """Startup event handler."""
-    pass
+    """Startup: launch image worker pool and install signal handlers."""
+    from app.services.upload_service import install_signal_handlers, start_workers
+
+    await start_workers()
+    install_signal_handlers()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Graceful shutdown: release worker pool resources."""
-    from app.services.upload_service import _executor
+    """Graceful shutdown: drain queue, cancel workers, release pool resources."""
+    from app.services.upload_service import shutdown_workers
 
-    if _executor is not None:
-        _executor.shutdown(wait=True)
+    await shutdown_workers()

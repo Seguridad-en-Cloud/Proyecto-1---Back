@@ -1,4 +1,6 @@
 """Public menu HTML renderer - Server Side Rendering."""
+import hashlib
+import logging
 from pathlib import Path
 
 from fastapi import APIRouter, Request
@@ -6,7 +8,11 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from app.api.deps import DatabaseSession
+from app.core.config import settings
+from app.models.scan_event import ScanEvent
 from app.services.menu_service import MenuService
+
+logger = logging.getLogger(__name__)
 
 # Setup templates
 templates_dir = Path(__file__).parent.parent.parent / "templates"
@@ -39,7 +45,22 @@ async def render_menu(
     """
     service = MenuService(session)
     menu = await service.get_menu_by_slug(slug)
-    
+
+    # Record scan event (best-effort)
+    try:
+        client_ip = request.client.host if request.client else "unknown"
+        ip_hash = hashlib.sha256(f"{settings.ip_hash_salt}:{client_ip}".encode()).hexdigest()
+        event = ScanEvent(
+            restaurant_id=menu.restaurant_id,
+            user_agent=request.headers.get("user-agent", "unknown"),
+            ip_hash=ip_hash,
+            referrer=request.headers.get("referer"),
+        )
+        session.add(event)
+        await session.commit()
+    except Exception:
+        logger.debug("Failed to record scan event", exc_info=True)
+
     # Convert Decimal to float for template rendering
     context = {
         "request": request,

@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.api.deps import CurrentUserId, DatabaseSession
+from app.core.config import settings
 from app.schemas.upload import DeleteResponse, UploadResponse
 from app.services.restaurant_service import RestaurantService
 from app.services.upload_service import delete_image, process_and_upload_image
@@ -57,16 +58,16 @@ async def upload_image(
     return UploadResponse(**urls)
 
 
-@router.delete("", response_model=DeleteResponse)
+@router.delete("/{filename:path}", response_model=DeleteResponse)
 async def delete_uploaded_image(
-    url: str = Query(..., description="Public URL of the image to delete"),
+    filename: str,
     user_id: CurrentUserId = ...,
     session: DatabaseSession = ...,
 ):
     """Delete a previously uploaded image from object storage.
 
     Args:
-        url: Full public URL of the image to delete.
+        filename: Object key / path of the image to delete (e.g., 'dishes/large/abc.webp').
         user_id: Authenticated user ID.
         session: Database session.
 
@@ -76,6 +77,9 @@ async def delete_uploaded_image(
     # Verify user owns a restaurant (authorization)
     service = RestaurantService(session)
     await service.get_by_owner(user_id)
+
+    # Reconstruct the full URL from the filename to delegate to delete_image
+    url = f"{settings.s3_public_url.rstrip('/')}/{filename}"
 
     try:
         await delete_image(url)

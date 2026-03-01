@@ -1,9 +1,18 @@
-"""Image upload service with worker pool for processing."""
+"""Image upload service with worker pool for processing.
+
+Implements a worker pool pattern with:
+- asyncio.Queue for pending image processing jobs
+- ProcessPoolExecutor for CPU-bound image manipulation
+- Configurable number of workers via IMAGE_WORKER_COUNT env var
+- Graceful shutdown on SIGTERM/SIGINT
+"""
 import asyncio
 import io
 import logging
+import signal
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
+from typing import Any
 
 from PIL import Image
 
@@ -22,8 +31,11 @@ IMAGE_VARIANTS = {
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_SIZE_BYTES = settings.image_max_size_mb * 1024 * 1024
 
-# Global process pool for image processing
+# ── Worker pool globals ──
 _executor: ProcessPoolExecutor | None = None
+_job_queue: asyncio.Queue[dict[str, Any]] | None = None
+_workers: list[asyncio.Task[None]] = []
+_shutting_down = False
 
 
 def _get_executor() -> ProcessPoolExecutor:
@@ -32,6 +44,14 @@ def _get_executor() -> ProcessPoolExecutor:
     if _executor is None:
         _executor = ProcessPoolExecutor(max_workers=settings.image_worker_count)
     return _executor
+
+
+def get_job_queue() -> asyncio.Queue[dict[str, Any]]:
+    """Get or create the asyncio job queue (lazy singleton)."""
+    global _job_queue
+    if _job_queue is None:
+        _job_queue = asyncio.Queue()
+    return _job_queue
 
 
 def _process_image_variant(
@@ -71,6 +91,9 @@ async def process_and_upload_image(
 ) -> dict[str, str]:
     """Process image into variants and upload all to S3.
 
+    Enqueues the work into the asyncio.Queue and awaits the result,
+    so processing is coordinated through the worker pool.
+
     Args:
         file_bytes: Raw uploaded file bytes.
         content_type: MIME type of the uploaded file.
@@ -93,31 +116,134 @@ async def process_and_upload_image(
             f"Invalid file type. Allowed: {', '.join(ALLOWED_CONTENT_TYPES)}"
         )
 
+    # Create a future that the worker will resolve
+    result_future: asyncio.Future[dict[str, str]] = asyncio.get_event_loop().create_future()
+
+    # Enqueue the job
+    job = {
+        "file_bytes": file_bytes,
+        "prefix": prefix,
+        "original_filename": original_filename,
+        "future": result_future,
+    }
+    await get_job_queue().put(job)
+
+    # Await the result from the worker
+    return await result_future
+
+
+async def _process_job(job: dict[str, Any]) -> None:
+    """Process a single image job from the queue.
+
+    Runs image processing in the ProcessPoolExecutor, uploads results,
+    and resolves the job's future with the URLs.
+    """
     loop = asyncio.get_event_loop()
     executor = _get_executor()
-    urls: dict[str, str] = {}
+    future: asyncio.Future[dict[str, str]] = job["future"]
 
-    # Process all variants concurrently in the process pool
-    tasks = {}
-    for variant_name, spec in IMAGE_VARIANTS.items():
-        func = partial(
-            _process_image_variant,
-            file_bytes,
-            spec["size"],
-            spec["quality"],
-        )
-        tasks[variant_name] = loop.run_in_executor(executor, func)
+    try:
+        urls: dict[str, str] = {}
+        tasks = {}
+        for variant_name, spec in IMAGE_VARIANTS.items():
+            func = partial(
+                _process_image_variant,
+                job["file_bytes"],
+                spec["size"],
+                spec["quality"],
+            )
+            tasks[variant_name] = loop.run_in_executor(executor, func)
 
-    # Await all processing tasks
-    for variant_name, task in tasks.items():
-        processed_bytes = await task
-        key = generate_object_key(f"{prefix}/{variant_name}", original_filename)
-        # Override extension to webp since we always convert
-        key = key.rsplit(".", 1)[0] + ".webp"
-        url = upload_file_to_s3(processed_bytes, key, "image/webp")
-        urls[variant_name] = url
+        for variant_name, task in tasks.items():
+            processed_bytes = await task
+            key = generate_object_key(
+                f"{job['prefix']}/{variant_name}", job["original_filename"]
+            )
+            key = key.rsplit(".", 1)[0] + ".webp"
+            url = upload_file_to_s3(processed_bytes, key, "image/webp")
+            urls[variant_name] = url
 
-    return urls
+        future.set_result(urls)
+    except Exception as exc:
+        if not future.done():
+            future.set_exception(exc)
+
+
+async def _worker(worker_id: int) -> None:
+    """Worker coroutine that pulls jobs from the queue and processes them."""
+    queue = get_job_queue()
+    logger.info("Image worker %d started", worker_id)
+    while True:
+        try:
+            job = await queue.get()
+            logger.debug("Worker %d processing job", worker_id)
+            await _process_job(job)
+            queue.task_done()
+        except asyncio.CancelledError:
+            logger.info("Image worker %d shutting down", worker_id)
+            break
+        except Exception:
+            logger.exception("Worker %d encountered an error", worker_id)
+
+
+async def start_workers() -> None:
+    """Start the async worker pool (called on app startup)."""
+    global _workers
+    num = settings.image_worker_count
+    for i in range(num):
+        task = asyncio.create_task(_worker(i))
+        _workers.append(task)
+    logger.info("Started %d image processing workers", num)
+
+
+async def shutdown_workers() -> None:
+    """Graceful shutdown: wait for pending jobs, cancel workers, shutdown executor."""
+    global _shutting_down, _workers, _executor
+    if _shutting_down:
+        return
+    _shutting_down = True
+    logger.info("Shutting down image processing workers...")
+
+    # Wait for the queue to drain (with timeout)
+    queue = get_job_queue()
+    try:
+        await asyncio.wait_for(queue.join(), timeout=30.0)
+    except asyncio.TimeoutError:
+        logger.warning("Timed out waiting for image queue to drain")
+
+    # Cancel worker tasks
+    for task in _workers:
+        task.cancel()
+    if _workers:
+        await asyncio.gather(*_workers, return_exceptions=True)
+    _workers.clear()
+
+    # Shutdown process pool
+    if _executor is not None:
+        _executor.shutdown(wait=True)
+        _executor = None
+
+    logger.info("Image processing workers shut down")
+
+
+def install_signal_handlers() -> None:
+    """Install SIGTERM/SIGINT handlers for graceful shutdown of the worker pool.
+
+    Should be called after the event loop is running (e.g., in FastAPI startup).
+    """
+    loop = asyncio.get_event_loop()
+
+    def _handle_signal(sig: signal.Signals) -> None:
+        logger.info("Received signal %s, initiating graceful shutdown", sig.name)
+        loop.create_task(shutdown_workers())
+
+    try:
+        loop.add_signal_handler(signal.SIGTERM, _handle_signal, signal.SIGTERM)
+        loop.add_signal_handler(signal.SIGINT, _handle_signal, signal.SIGINT)
+        logger.info("Installed SIGTERM/SIGINT signal handlers for worker pool")
+    except NotImplementedError:
+        # Windows doesn't support add_signal_handler
+        logger.debug("Signal handlers not supported on this platform")
 
 
 async def delete_image(url: str) -> None:

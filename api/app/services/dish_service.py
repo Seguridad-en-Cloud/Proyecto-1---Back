@@ -92,6 +92,7 @@ class DishService:
             await self._verify_category_ownership(category_id, owner_user_id)
         
         dishes, total = await self.repo.list_dishes(
+            restaurant_id=restaurant.id,
             category_id=category_id,
             available=available,
             featured=featured,
