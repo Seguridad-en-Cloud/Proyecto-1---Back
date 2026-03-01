@@ -68,6 +68,11 @@ class Settings(BaseSettings):
         default="http://localhost:9000/livemenu", alias="S3_PUBLIC_URL"
     )
 
+    # Public-facing base URL (used in QR codes, emails, etc.)
+    public_base_url: str = Field(
+        default="https://localhost", alias="PUBLIC_BASE_URL"
+    )
+
     # Image processing
     image_max_size_mb: int = Field(default=5, alias="IMAGE_MAX_SIZE_MB")
     image_worker_count: int = Field(default=4, alias="IMAGE_WORKER_COUNT")

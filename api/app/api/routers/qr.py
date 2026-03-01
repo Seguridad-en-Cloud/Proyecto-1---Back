@@ -3,6 +3,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 
 from app.api.deps import CurrentUserId, DatabaseSession
+from app.core.config import settings
 from app.services.qr_service import (
     generate_qr_png,
     generate_qr_svg,
@@ -55,8 +56,9 @@ async def get_qr_code(
     service = RestaurantService(session)
     restaurant = await service.get_by_owner(user_id)
 
-    # Build the public menu URL
-    menu_url = f"https://localhost/m/{restaurant.slug}"
+    # Build the public menu URL using configurable base
+    base = settings.public_base_url.rstrip("/")
+    menu_url = f"{base}/m/{restaurant.slug}"
     box_size = resolve_box_size(size)
 
     if format == "svg":
