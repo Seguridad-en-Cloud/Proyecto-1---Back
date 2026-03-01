@@ -5,7 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.api.routers import analytics, auth, categories, dishes, menu, menu_public, restaurant
+from app.api.routers import (
+    analytics,
+    auth,
+    categories,
+    dishes,
+    menu,
+    menu_public,
+    qr,
+    restaurant,
+    upload,
+)
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.middleware.errors import (
@@ -59,6 +69,8 @@ app.include_router(categories.router)
 app.include_router(dishes.router)
 app.include_router(analytics.router)
 app.include_router(menu.router)
+app.include_router(upload.router)
+app.include_router(qr.router)
 
 
 @app.on_event("startup")
@@ -69,5 +81,8 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Shutdown event handler."""
-    pass
+    """Graceful shutdown: release worker pool resources."""
+    from app.services.upload_service import _executor
+
+    if _executor is not None:
+        _executor.shutdown(wait=True)

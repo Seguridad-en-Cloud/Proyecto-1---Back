@@ -4,6 +4,7 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.cache import cache_invalidate_prefix
 from app.models.restaurant import Restaurant
 from app.repositories.restaurant_repo import RestaurantRepository
 from app.schemas.restaurant import RestaurantCreate, RestaurantUpdate
@@ -111,6 +112,7 @@ class RestaurantService:
             update_data["slug"] = slug
         
         restaurant = await self.repo.update(restaurant, **update_data)
+        cache_invalidate_prefix("menu:")
         return restaurant
     
     async def delete(self, owner_user_id: uuid.UUID) -> None:
@@ -124,6 +126,7 @@ class RestaurantService:
         """
         restaurant = await self.get_by_owner(owner_user_id)
         await self.repo.delete(restaurant)
+        cache_invalidate_prefix("menu:")
     
     async def _ensure_unique_slug(
         self, 

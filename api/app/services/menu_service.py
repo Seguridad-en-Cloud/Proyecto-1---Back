@@ -1,14 +1,17 @@
-"""Menu service with business logic."""
+"""Menu service with business logic and in-memory cache."""
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 
+from app.core.cache import cache_get, cache_set
 from app.models.restaurant import Restaurant
 from app.models.category import Category
 from app.models.dish import Dish
 from app.repositories.restaurant_repo import RestaurantRepository
 from app.schemas.menu import MenuCategoryResponse, MenuDishResponse, MenuResponse
+
+MENU_CACHE_TTL = 300  # 5 minutes
 
 
 class MenuService:
@@ -19,7 +22,7 @@ class MenuService:
         self.repo = RestaurantRepository(session)
     
     async def get_menu_by_slug(self, slug: str) -> MenuResponse:
-        """Get complete menu by restaurant slug.
+        """Get complete menu by restaurant slug (with cache).
         
         Args:
             slug: Restaurant slug
@@ -30,6 +33,12 @@ class MenuService:
         Raises:
             HTTPException: If restaurant not found
         """
+        # Check cache first
+        cache_key = f"menu:{slug}"
+        cached = cache_get(cache_key)
+        if cached is not None:
+            return cached
+
         # Get restaurant by slug
         restaurant = await self.repo.get_by_slug(slug)
         
@@ -90,7 +99,7 @@ class MenuService:
                 )
         
         # Build and return menu response
-        return MenuResponse(
+        menu_response = MenuResponse(
             restaurant_id=restaurant.id,
             restaurant_name=restaurant.name,
             restaurant_slug=restaurant.slug,
@@ -101,3 +110,8 @@ class MenuService:
             hours=restaurant.hours,
             categories=category_responses,
         )
+
+        # Store in cache
+        cache_set(cache_key, menu_response, ttl=MENU_CACHE_TTL)
+
+        return menu_response

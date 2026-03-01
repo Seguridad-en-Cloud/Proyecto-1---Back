@@ -137,3 +137,60 @@ async def test_reorder_categories(
     )
     
     assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_create_category_no_restaurant(
+    client: AsyncClient, auth_headers: dict[str, str]
+):
+    """Test creating a category without a restaurant returns 404."""
+    response = await client.post(
+        "/api/v1/admin/categories",
+        headers=auth_headers,
+        json={"name": "Orphan Category"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_nonexistent_category(
+    client: AsyncClient, auth_headers: dict[str, str], restaurant_created
+):
+    """Test updating a category that does not exist."""
+    import uuid
+
+    fake_id = str(uuid.uuid4())
+    response = await client.put(
+        f"/api/v1/admin/categories/{fake_id}",
+        headers=auth_headers,
+        json={"name": "Ghost"},
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_delete_nonexistent_category(
+    client: AsyncClient, auth_headers: dict[str, str], restaurant_created
+):
+    """Test deleting a category that does not exist."""
+    import uuid
+
+    fake_id = str(uuid.uuid4())
+    response = await client.delete(
+        f"/api/v1/admin/categories/{fake_id}",
+        headers=auth_headers,
+    )
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_categories_empty(
+    client: AsyncClient, auth_headers: dict[str, str], restaurant_created
+):
+    """Test listing categories when none exist."""
+    response = await client.get(
+        "/api/v1/admin/categories",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json() == []

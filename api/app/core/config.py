@@ -59,6 +59,19 @@ class Settings(BaseSettings):
     # API Docs (disable in production)
     enable_docs: bool = Field(default=True, alias="ENABLE_DOCS")
 
+    # S3 / MinIO settings
+    s3_endpoint: str = Field(default="http://minio:9000", alias="S3_ENDPOINT")
+    s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
+    s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
+    s3_bucket: str = Field(default="livemenu", alias="S3_BUCKET")
+    s3_public_url: str = Field(
+        default="http://localhost:9000/livemenu", alias="S3_PUBLIC_URL"
+    )
+
+    # Image processing
+    image_max_size_mb: int = Field(default=5, alias="IMAGE_MAX_SIZE_MB")
+    image_worker_count: int = Field(default=4, alias="IMAGE_WORKER_COUNT")
+
 
 # Global settings instance
 settings = Settings()
