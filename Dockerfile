@@ -49,4 +49,4 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 
 # tini handles PID 1 / zombie reaping; graceful shutdown
 ENTRYPOINT ["tini", "--"]
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"]
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"]
