@@ -53,7 +53,7 @@ async def upload_image(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
-        )
+        ) from exc
 
     return UploadResponse(**urls)
 
@@ -88,6 +88,6 @@ async def delete_uploaded_image(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete image",
-        )
+        ) from exc
 
     return DeleteResponse()

@@ -100,13 +100,16 @@ async def test_delete_image_success(
     client: AsyncClient,
     restaurant_headers: dict[str, str],
 ):
-    """Test deleting an uploaded image."""
+    """Test deleting an uploaded image.
+
+    The endpoint is ``DELETE /api/v1/admin/upload/{filename:path}`` so the
+    object key is part of the URL, not a query parameter.
+    """
     mock_delete.return_value = None
 
     response = await client.delete(
-        "/api/v1/admin/upload",
+        "/api/v1/admin/upload/dishes/thumbnail/abc.webp",
         headers=restaurant_headers,
-        params={"url": "http://localhost:9000/livemenu/dishes/thumbnail/abc.webp"},
     )
 
     assert response.status_code == 200

@@ -33,6 +33,25 @@ jobs:
   test:
     name: Lint & test
     runs-on: ubuntu-latest
+
+    # Integration tests in conftest.py talk to a real Postgres. We spin up a
+    # disposable container in the runner and create the empty test database
+    # before pytest runs.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: livemenu
+          POSTGRES_PASSWORD: livemenu
+          POSTGRES_DB: livemenu_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -46,16 +65,15 @@ jobs:
           pip install --upgrade pip
           pip install -e ".[dev]"
 
-      # Style/lint warnings — informative, NOT a deploy gate. The Entrega 2
-      # rubric evaluates security (Trivy), not Python style. Fail the job
-      # only on hard errors (pyflakes), not on style/import-ordering rules.
-      - name: Ruff (advisory)
-        continue-on-error: true
+      - name: Ruff
         run: ruff check . --output-format=github
 
       - name: Pytest with coverage
         env:
           PYTHONPATH: ${{ github.workspace }}/api
+          # Override the conftest URL so it points at the GitHub-Actions
+          # Postgres service (host=localhost, port=5432).
+          DATABASE_URL: postgresql+asyncpg://livemenu:livemenu@localhost:5432/livemenu_test
         run: pytest --cov=app --cov-report=term --cov-fail-under=60
 
   # ─────────────────────────────────────────────────────────────────────

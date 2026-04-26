@@ -76,13 +76,39 @@ async def test_process_and_upload_invalid_content_type():
         await process_and_upload_image(b"\x00", "text/plain", "dishes", "test.txt")
 
 
+@pytest.fixture
+async def with_workers():
+    """Start the worker pool for tests that exercise the full pipeline.
+
+    In production the workers are launched by the FastAPI ``lifespan`` context
+    manager. Plain pytest tests don't go through that lifecycle, so without
+    this fixture ``process_and_upload_image`` would put a job on the queue
+    and await a future that no consumer ever resolves — i.e. the test would
+    hang forever.
+    """
+    from app.services import upload_service
+
+    await upload_service.start_workers()
+    try:
+        yield
+    finally:
+        await upload_service.shutdown_workers()
+        # Reset module-level state so the next test starts fresh.
+        upload_service._workers.clear()
+        upload_service._executor = None
+        upload_service._job_queue = None
+        upload_service._shutting_down = False
+
+
 @pytest.mark.asyncio
 @patch("app.services.upload_service.upload_file_to_s3")
 @patch("app.services.upload_service.generate_object_key", return_value="dishes/abc.webp")
-async def test_process_and_upload_success(mock_key, mock_upload):
+async def test_process_and_upload_success(mock_key, mock_upload, with_workers):
     """Full pipeline: generate variants and upload each."""
-    from PIL import Image
     import io
+
+    from PIL import Image
+
     img = Image.new("RGB", (500, 500), "blue")
     buf = io.BytesIO()
     img.save(buf, format="PNG")

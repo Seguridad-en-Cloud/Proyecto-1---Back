@@ -34,18 +34,18 @@ async def get_current_user_id(
         payload = verify_access_token(token)
         user_id = uuid.UUID(payload["sub"])
         return user_id
-    except JWTError:
+    except JWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="token_expired",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-    except Exception:
+        ) from exc
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc
 
 
 # Type aliases for cleaner dependency injection

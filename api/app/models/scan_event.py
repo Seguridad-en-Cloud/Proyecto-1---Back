@@ -1,4 +1,6 @@
 """Scan event model for analytics."""
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 
