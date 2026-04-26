@@ -24,11 +24,10 @@ terraform {
     }
   }
 
-  # Uncomment after running the bootstrap step in README.md.
-  # backend "gcs" {
-  #   bucket = "livemenu-tfstate-<your-suffix>"
-  #   prefix = "entrega-2"
-  # }
+  backend "gcs" {
+     bucket = "livemenu-tfstate-lvm"
+     prefix = "entrega-2"
+  }
 }
 
 provider "google" {
