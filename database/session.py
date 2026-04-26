@@ -68,14 +68,17 @@ def _build_cloud_sql_engine():
     db_pass = get_secret("DB_PASSWORD") or ""
     db_name = settings.db_name or get_secret("DB_NAME") or "livemenu"
 
-    # Mutable holder so the closure can lazily populate the singleton.
-    _state: dict[str, object] = {"connector": None}
-
     async def _getconn():
-        if _state["connector"] is None:
-            _state["connector"] = Connector(refresh_strategy="lazy")
-        connector = _state["connector"]
-        return await connector.connect_async(  # type: ignore[union-attr]
+        # New Connector per pooled connection. The Cloud SQL Python Connector
+        # captures the asyncio event loop at __init__ and refuses requests
+        # from any other loop; SQLAlchemy's async pool may invoke the creator
+        # across greenlets, so caching the connector triggers
+        # ``ConnectorLoopError``. Creating per-call binds it to whatever loop
+        # SQLAlchemy hands us, and the SQLAlchemy pool itself keeps the
+        # underlying TCP socket alive for ``pool_recycle`` seconds, so we
+        # only actually instantiate ~``pool_size`` connectors per container.
+        connector = Connector(refresh_strategy="lazy")
+        return await connector.connect_async(
             settings.cloud_sql_connection_name,
             "asyncpg",
             user=db_user,
