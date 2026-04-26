@@ -37,7 +37,6 @@ class RefreshTokenRepository:
         )
         self.session.add(refresh_token)
         await self.session.commit()
-        await self.session.refresh(refresh_token)
         return refresh_token
     
     async def get_by_token(self, token: str) -> RefreshToken | None:

@@ -1,6 +1,7 @@
 """Pytest configuration and fixtures."""
 import asyncio
 from typing import AsyncGenerator
+from unittest.mock import MagicMock, patch
 
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -47,13 +48,15 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     
-    # Create session
-    async with TestSessionLocal() as session:
+    # Create session (keep it open during the test)
+    session = TestSessionLocal()
+    try:
         yield session
-    
-    # Drop tables after test
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    finally:
+        await session.close()
+        # Drop tables after test
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture
@@ -89,3 +92,15 @@ async def auth_headers(client: AsyncClient) -> dict[str, str]:
     access_token = data["access_token"]
     
     return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest.fixture(autouse=True)
+def mock_storage():
+    """Mock S3Storage to avoid connecting to MinIO/GCS during tests."""
+    mock_backend = MagicMock()
+    mock_backend.upload.return_value = "http://mock-storage/bucket/test-image.webp"
+    mock_backend.delete.return_value = None
+    mock_backend.public_prefix.return_value = "http://mock-storage/bucket"
+    
+    with patch("app.core.storage.get_storage", return_value=mock_backend):
+        yield mock_backend

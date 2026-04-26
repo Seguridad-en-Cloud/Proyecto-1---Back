@@ -62,8 +62,32 @@ async def render_menu(
     except Exception:
         logger.debug("Failed to record scan event", exc_info=True)
 
-    # Convert Decimal to float for template rendering
-    context = {
+    # Convert Decimal to float for template rendering - all primitives
+    categories_data = []
+    for cat in menu.categories:
+        dishes_data = []
+        for dish in cat.dishes:
+            dishes_data.append({
+                "id": str(dish.id),
+                "name": dish.name,
+                "description": dish.description,
+                "price": float(dish.price),
+                "sale_price": float(dish.sale_price) if dish.sale_price else None,
+                "image_url": dish.image_url,
+                "tags": dish.tags or [],
+                "featured": dish.featured,
+                "position": dish.position,
+            })
+        categories_data.append({
+            "id": str(cat.id),
+            "name": cat.name,
+            "description": cat.description,
+            "position": cat.position,
+            "dishes": dishes_data,
+        })
+
+    # Force all data to be JSON-serializable (no SQLAlchemy objects)
+    context_data = {
         "request": request,
         "restaurant_name": menu.restaurant_name,
         "restaurant_slug": menu.restaurant_slug,
@@ -72,26 +96,7 @@ async def render_menu(
         "phone": menu.phone,
         "address": menu.address,
         "hours": json.dumps(menu.hours) if menu.hours else None,
-        "categories": [
-            {
-                "name": cat.name,
-                "description": cat.description,
-                "position": cat.position,
-                "dishes": [
-                    {
-                        "name": dish.name,
-                        "description": dish.description,
-                        "price": float(dish.price),
-                        "sale_price": float(dish.sale_price) if dish.sale_price else None,
-                        "image_url": dish.image_url,
-                        "tags": dish.tags,
-                        "featured": dish.featured,
-                    }
-                    for dish in cat.dishes
-                ],
-            }
-            for cat in menu.categories
-        ],
+        "categories": categories_data,
     }
     
-    return templates.TemplateResponse("menu.html", context)
+    return templates.TemplateResponse("menu.html", context_data)
