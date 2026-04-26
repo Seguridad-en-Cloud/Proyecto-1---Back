@@ -75,7 +75,6 @@ def _build_cloud_sql_engine():
     async def _getconn():
         global _connector
         if _connector is None:
-            # Initialize exactly once, in the active uvicorn event loop.
             _connector = Connector()
             
         return await _connector.connect_async(
@@ -112,6 +111,11 @@ AsyncSessionLocal = async_sessionmaker(
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency that yields a managed async session."""
+    global _connector
+    if _connector is None and settings.cloud_sql_connection_name:
+        from google.cloud.sql.connector import Connector
+        _connector = Connector()
+
     async with AsyncSessionLocal() as session:
         try:
             yield session
