@@ -11,7 +11,7 @@ Two modes:
 """
 from __future__ import annotations
 
-import asyncio
+
 import logging
 from typing import AsyncGenerator
 
@@ -57,7 +57,7 @@ def _build_cloud_sql_engine():
     request and reuses thereafter.
     """
     try:
-        from google.cloud.sql.connector import Connector, IPTypes  # type: ignore
+        from google.cloud.sql.connector import IPTypes  # type: ignore
     except ImportError as exc:
         raise RuntimeError(
             "CLOUD_SQL_CONNECTION_NAME is set but cloud-sql-python-connector "
