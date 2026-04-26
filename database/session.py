@@ -11,6 +11,7 @@ Two modes:
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import AsyncGenerator
 
@@ -68,17 +69,16 @@ def _build_cloud_sql_engine():
     db_pass = get_secret("DB_PASSWORD") or ""
     db_name = settings.db_name or get_secret("DB_NAME") or "livemenu"
 
+    global _connector
+    _connector = None
+
     async def _getconn():
-        # New Connector per pooled connection. The Cloud SQL Python Connector
-        # captures the asyncio event loop at __init__ and refuses requests
-        # from any other loop; SQLAlchemy's async pool may invoke the creator
-        # across greenlets, so caching the connector triggers
-        # ``ConnectorLoopError``. Creating per-call binds it to whatever loop
-        # SQLAlchemy hands us, and the SQLAlchemy pool itself keeps the
-        # underlying TCP socket alive for ``pool_recycle`` seconds, so we
-        # only actually instantiate ~``pool_size`` connectors per container.
-        connector = Connector(refresh_strategy="lazy")
-        return await connector.connect_async(
+        global _connector
+        if _connector is None:
+            # Initialize exactly once, in the active uvicorn event loop.
+            _connector = Connector()
+            
+        return await _connector.connect_async(
             settings.cloud_sql_connection_name,
             "asyncpg",
             user=db_user,
