@@ -74,6 +74,15 @@ resource "google_compute_backend_service" "frontend" {
     max_ttl           = 86400
     negative_caching  = true
     serve_while_stale = 86400
+
+    # Older provider versions require this block to be present even when we're
+    # happy with the defaults. Vite assets are content-hashed so query strings
+    # are cache-busters and SHOULD be part of the key.
+    cache_key_policy {
+      include_host         = true
+      include_protocol     = true
+      include_query_string = true
+    }
   }
 
   backend {
