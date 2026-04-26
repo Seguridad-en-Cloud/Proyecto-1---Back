@@ -1,6 +1,6 @@
 """Unit tests for logging configuration."""
 import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from app.core.logging import configure_logging, get_logger
 

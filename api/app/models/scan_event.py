@@ -1,12 +1,19 @@
 """Scan event model for analytics."""
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+from app.utils.datetime_utils import utcnow
+
+if TYPE_CHECKING:
+    from app.models.restaurant import Restaurant
 
 
 class ScanEvent(Base):
@@ -27,7 +34,7 @@ class ScanEvent(Base):
     )
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False,
         index=True
     )
@@ -36,4 +43,4 @@ class ScanEvent(Base):
     referrer: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     # Relationships
-    restaurant: Mapped["Restaurant"] = relationship("Restaurant", back_populates="scan_events")
+    restaurant: Mapped[Restaurant] = relationship("Restaurant", back_populates="scan_events")

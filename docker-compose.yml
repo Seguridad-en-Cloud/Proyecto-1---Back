@@ -1,4 +1,8 @@
-version: '3.8'
+# Local development stack. Production runs on Cloud Run + Cloud SQL +
+# Cloud Storage + Secret Manager (see infra/terraform/ in the repo root).
+#
+# Note: this file is for *development only*. Secrets here are dummy values
+# that match what `.env.example` ships; never copy them into production.
 
 services:
   db:
@@ -6,21 +10,23 @@ services:
     container_name: livemenu-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: livemenu
-      POSTGRES_PASSWORD: livemenu
-      POSTGRES_DB: livemenu
+      POSTGRES_USER: ${DB_USER:-livemenu}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-livemenu}
+      POSTGRES_DB: ${DB_NAME:-livemenu}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U livemenu"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-livemenu}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: livemenu-api
     restart: unless-stopped
     depends_on:
@@ -28,29 +34,21 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+    # Pull values from a local .env file (see .env.example). docker-compose
+    # auto-loads ./.env, which keeps secrets out of this manifest entirely.
+    env_file:
+      - .env
     environment:
-      APP_ENV: dev
-      APP_NAME: livemenu-api
-      DEBUG: "false"
-      CORS_ORIGINS: "[\"http://localhost:3000\",\"http://localhost:5173\"]"
-      DATABASE_URL: "postgresql+asyncpg://livemenu:livemenu@db:5432/livemenu"
+      # Hard overrides specific to docker-compose networking. Anything else
+      # comes from .env so we don't duplicate values.
+      DATABASE_URL: "postgresql+asyncpg://${DB_USER:-livemenu}:${DB_PASSWORD:-livemenu}@db:5432/${DB_NAME:-livemenu}"
       PYTHONPATH: "/app/api"
-      JWT_SECRET: "change-me-in-production-to-a-strong-secret"
-      JWT_ACCESS_TTL_MIN: 15
-      JWT_REFRESH_TTL_DAYS: 7
-      IP_HASH_SALT: "change-me-too-random-salt"
-      RATE_LIMIT_PER_MINUTE: 100
-      LOG_LEVEL: INFO
-      ENABLE_DOCS: "true"
+      STORAGE_BACKEND: "s3"
       S3_ENDPOINT: "http://minio:9000"
-      S3_ACCESS_KEY: "minioadmin"
-      S3_SECRET_KEY: "minioadmin"
-      S3_BUCKET: "livemenu"
-      S3_PUBLIC_URL: "http://localhost:9000/livemenu"
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/auth/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/v1/auth/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -85,8 +83,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     ports:
       - "9000:9000"
       - "9001:9001"

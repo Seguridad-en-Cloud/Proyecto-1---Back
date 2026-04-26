@@ -1,13 +1,20 @@
 """Dish model."""
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+from app.utils.datetime_utils import utcnow
+
+if TYPE_CHECKING:
+    from app.models.category import Category
 
 
 class Dish(Base):
@@ -37,13 +44,13 @@ class Dish(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.utcnow,
+        default=utcnow,
         nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
+        default=utcnow,
+        onupdate=utcnow,
         nullable=False
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
@@ -53,4 +60,4 @@ class Dish(Base):
     )
     
     # Relationships
-    category: Mapped["Category"] = relationship("Category", back_populates="dishes")
+    category: Mapped[Category] = relationship("Category", back_populates="dishes")

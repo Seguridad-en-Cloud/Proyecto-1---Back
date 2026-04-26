@@ -1,7 +1,6 @@
 """Unit tests for JWT token utilities."""
 import uuid
-from datetime import datetime, timedelta
-from unittest.mock import patch
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from jose import jwt, JWTError
@@ -82,8 +81,8 @@ class TestDecodeToken:
         payload = {
             "sub": str(uuid.uuid4()),
             "type": "access",
-            "exp": datetime.utcnow() - timedelta(hours=1),
-            "iat": datetime.utcnow() - timedelta(hours=2),
+            "exp": datetime.now(timezone.utc) - timedelta(hours=1),
+            "iat": datetime.now(timezone.utc) - timedelta(hours=2),
         }
         token = jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
         with pytest.raises(JWTError):

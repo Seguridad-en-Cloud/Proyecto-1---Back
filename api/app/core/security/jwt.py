@@ -1,6 +1,6 @@
 """JWT token creation and validation utilities."""
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from jose import JWTError, jwt
@@ -10,15 +10,15 @@ from app.core.config import settings
 
 def create_access_token(user_id: uuid.UUID, email: str) -> str:
     """Create a JWT access token.
-    
+
     Args:
         user_id: User's UUID
         email: User's email
-        
+
     Returns:
         Encoded JWT token
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires_delta = timedelta(minutes=settings.jwt_access_ttl_min)
     
     payload = {
@@ -28,6 +28,7 @@ def create_access_token(user_id: uuid.UUID, email: str) -> str:
         "iat": now,
         "nbf": now,
         "exp": now + expires_delta,
+        "jti": str(uuid.uuid4()),  # Unique JWT ID
     }
     
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -43,7 +44,7 @@ def create_refresh_token(user_id: uuid.UUID, email: str) -> str:
     Returns:
         Encoded JWT token
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires_delta = timedelta(days=settings.jwt_refresh_ttl_days)
     
     payload = {
@@ -53,6 +54,7 @@ def create_refresh_token(user_id: uuid.UUID, email: str) -> str:
         "iat": now,
         "nbf": now,
         "exp": now + expires_delta,
+        "jti": str(uuid.uuid4()),  # Unique JWT ID to prevent duplicates
     }
     
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

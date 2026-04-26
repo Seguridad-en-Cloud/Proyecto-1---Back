@@ -1,13 +1,12 @@
 """Tests for upload endpoints and service."""
 import io
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 
 from app.services.upload_service import (
     ALLOWED_CONTENT_TYPES,
-    MAX_SIZE_BYTES,
     _process_image_variant,
 )
 from app.core.storage import generate_object_key
@@ -46,7 +45,7 @@ async def test_upload_requires_restaurant(client: AsyncClient, auth_headers: dic
 
 
 @pytest.mark.asyncio
-@patch("app.services.upload_service.process_and_upload_image")
+@patch("app.api.routers.upload.process_and_upload_image")
 async def test_upload_image_success(
     mock_upload,
     client: AsyncClient,
@@ -75,7 +74,7 @@ async def test_upload_image_success(
 
 
 @pytest.mark.asyncio
-@patch("app.services.upload_service.process_and_upload_image")
+@patch("app.api.routers.upload.process_and_upload_image")
 async def test_upload_invalid_type(
     mock_upload,
     client: AsyncClient,
@@ -100,13 +99,16 @@ async def test_delete_image_success(
     client: AsyncClient,
     restaurant_headers: dict[str, str],
 ):
-    """Test deleting an uploaded image."""
+    """Test deleting an uploaded image.
+
+    The endpoint is ``DELETE /api/v1/admin/upload/{filename:path}`` so the
+    object key is part of the URL, not a query parameter.
+    """
     mock_delete.return_value = None
 
     response = await client.delete(
-        "/api/v1/admin/upload",
+        "/api/v1/admin/upload/dishes/thumbnail/abc.webp",
         headers=restaurant_headers,
-        params={"url": "http://localhost:9000/livemenu/dishes/thumbnail/abc.webp"},
     )
 
     assert response.status_code == 200

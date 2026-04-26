@@ -1,0 +1,14 @@
+# Local Terraform artifacts. Never commit state or tfvars — they contain
+# project IDs, secrets, and resource identifiers we don't want in source control.
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+!terraform.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json

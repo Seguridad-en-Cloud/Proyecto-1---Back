@@ -1,33 +1,75 @@
-# Use Python 3.12 slim image
-FROM python:3.12-slim
+# syntax=docker/dockerfile:1.7
+# ─────────────────────────────────────────────────────────────────────────
+# Multi-stage build for the LiveMenu API.
+# Stage 1 ("builder") compiles wheels for native deps (Pillow, asyncpg).
+# Stage 2 ("runtime") runs as a non-root user with the smallest possible
+# attack surface (no compilers, no apt cache, no shell scripting).
+# ─────────────────────────────────────────────────────────────────────────
 
-# Set working directory
-WORKDIR /app
+ARG PYTHON_VERSION=3.12-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    postgresql-client \
-    curl \
-    libjpeg62-turbo-dev \
-    zlib1g-dev \
-    libwebp-dev \
+# ── Stage 1: builder ──────────────────────────────────────────────────────
+FROM python:${PYTHON_VERSION} AS builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+# Compilers + headers needed only at build time. They are NOT copied to the
+# runtime image, keeping the final image small and reducing CVE surface.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        libjpeg-dev \
+        zlib1g-dev \
+        libwebp-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy project files
-COPY pyproject.toml ./
+COPY pyproject.toml requirements.txt ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+RUN pip install --upgrade pip && \
+    pip wheel --wheel-dir=/wheels -r requirements.txt
 
-# Copy application code
-COPY api/ ./api/
-COPY database/ ./database/
-COPY alembic.ini ./
+# ── Stage 2: runtime ──────────────────────────────────────────────────────
+FROM python:${PYTHON_VERSION} AS runtime
 
-# Expose port
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app/api \
+    PORT=8000
+
+# curl is only used by the HEALTHCHECK; libjpeg/libwebp are runtime libs for
+# Pillow. No compilers in the runtime image.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        libjpeg62-turbo \
+        libwebp7 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 1001 app \
+    && useradd  --system --uid 1001 --gid app --home /app --shell /usr/sbin/nologin app
+
+WORKDIR /app
+
+COPY --from=builder /wheels /wheels
+RUN pip install --no-index --find-links=/wheels /wheels/*.whl && rm -rf /wheels
+
+COPY --chown=app:app api/      ./api/
+COPY --chown=app:app database/ ./database/
+COPY --chown=app:app alembic.ini ./
+
+USER app
+
 EXPOSE 8000
 
-# Run migrations and start server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# In-container health probe; Cloud Run also probes the ``/api/v1/auth/health``
+# endpoint independently via its load-balancer.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl -fsS "http://localhost:${PORT}/api/v1/auth/health" || exit 1
+
+# ``alembic upgrade head`` runs migrations on every start. Cloud Run scales to
+# zero, so this is idempotent and adds ~200ms to a cold start.
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

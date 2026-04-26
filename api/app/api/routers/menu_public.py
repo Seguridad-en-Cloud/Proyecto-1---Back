@@ -1,5 +1,6 @@
 """Public menu HTML renderer - Server Side Rendering."""
 import hashlib
+import json
 import logging
 from pathlib import Path
 
@@ -61,36 +62,41 @@ async def render_menu(
     except Exception:
         logger.debug("Failed to record scan event", exc_info=True)
 
-    # Convert Decimal to float for template rendering
-    context = {
+    # Convert Decimal to float for template rendering - all primitives
+    categories_data = []
+    for cat in menu.categories:
+        dishes_data = []
+        for dish in cat.dishes:
+            dishes_data.append({
+                "id": str(dish.id),
+                "name": dish.name,
+                "description": dish.description,
+                "price": float(dish.price),
+                "sale_price": float(dish.sale_price) if dish.sale_price else None,
+                "image_url": dish.image_url,
+                "tags": dish.tags or [],
+                "featured": dish.featured,
+                "position": dish.position,
+            })
+        categories_data.append({
+            "id": str(cat.id),
+            "name": cat.name,
+            "description": cat.description,
+            "position": cat.position,
+            "dishes": dishes_data,
+        })
+
+    # Force all data to be JSON-serializable primitives (no objects)
+    # request is passed implicitly by Starlette for template context injection
+    context_data = {
         "request": request,
-        "restaurant_name": menu.restaurant_name,
-        "restaurant_slug": menu.restaurant_slug,
-        "description": menu.description,
-        "logo_url": menu.logo_url,
-        "phone": menu.phone,
-        "address": menu.address,
-        "hours": menu.hours,
-        "categories": [
-            {
-                "name": cat.name,
-                "description": cat.description,
-                "position": cat.position,
-                "dishes": [
-                    {
-                        "name": dish.name,
-                        "description": dish.description,
-                        "price": float(dish.price),
-                        "sale_price": float(dish.sale_price) if dish.sale_price else None,
-                        "image_url": dish.image_url,
-                        "tags": dish.tags,
-                        "featured": dish.featured,
-                    }
-                    for dish in cat.dishes
-                ],
-            }
-            for cat in menu.categories
-        ],
+        "restaurant_name": str(menu.restaurant_name) if menu.restaurant_name else "",
+        "restaurant_slug": str(menu.restaurant_slug) if menu.restaurant_slug else "",
+        "description": str(menu.description) if menu.description else "",
+        "logo_url": str(menu.logo_url) if menu.logo_url else "",
+        "phone": str(menu.phone) if menu.phone else "",
+        "address": str(menu.address) if menu.address else "",
+        "hours": json.dumps(menu.hours) if menu.hours else "{}",
+        "categories": categories_data,
     }
-    
-    return templates.TemplateResponse("menu.html", context)
+    return templates.TemplateResponse(request=request, name="menu.html", context=context_data)

@@ -5,7 +5,7 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, TokenResponse, AuthResponse, UserResponse
+from app.schemas.auth import RegisterRequest, LoginRequest, RefreshRequest, TokenResponse, UserResponse
 from app.schemas.restaurant import RestaurantCreate, RestaurantUpdate, RestaurantResponse
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryReorderRequest, CategoryResponse
 from app.schemas.dish import DishCreate, DishUpdate, DishResponse

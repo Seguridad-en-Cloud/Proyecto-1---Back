@@ -8,7 +8,7 @@ from app.core.cache import cache_invalidate_prefix
 from app.models.restaurant import Restaurant
 from app.repositories.restaurant_repo import RestaurantRepository
 from app.schemas.restaurant import RestaurantCreate, RestaurantUpdate
-from app.utils.slug import generate_slug, make_unique_slug
+from app.utils.slug import generate_slug
 
 
 class RestaurantService:

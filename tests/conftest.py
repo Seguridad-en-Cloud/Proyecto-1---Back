@@ -1,9 +1,10 @@
 """Pytest configuration and fixtures."""
 import asyncio
 from typing import AsyncGenerator
+from unittest.mock import MagicMock, patch
 
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
@@ -47,13 +48,15 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     
-    # Create session
-    async with TestSessionLocal() as session:
+    # Create session (keep it open during the test)
+    session = TestSessionLocal()
+    try:
         yield session
-    
-    # Drop tables after test
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+    finally:
+        await session.close()
+        # Drop tables after test
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest.fixture
@@ -65,7 +68,8 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     
     app.dependency_overrides[get_session] = override_get_session
     
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     
     app.dependency_overrides.clear()
@@ -88,3 +92,24 @@ async def auth_headers(client: AsyncClient) -> dict[str, str]:
     access_token = data["access_token"]
     
     return {"Authorization": f"Bearer {access_token}"}
+
+
+@pytest.fixture(autouse=True)
+def reset_storage_backend():
+    """Reset and mock storage backend to avoid connecting to MinIO/GCS."""
+    import app.core.storage
+    
+    # Reset the global _backend variable
+    app.core.storage._backend = None
+    
+    # Create mock backend
+    mock_backend = MagicMock()
+    mock_backend.upload.return_value = "http://mock-storage/bucket/test-image.webp"
+    mock_backend.delete.return_value = None
+    mock_backend.public_prefix.return_value = "http://mock-storage/bucket"
+    
+    with patch("app.core.storage.get_storage", return_value=mock_backend):
+        yield mock_backend
+    
+    # Reset again after test
+    app.core.storage._backend = None

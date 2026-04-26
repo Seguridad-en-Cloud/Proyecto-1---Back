@@ -1,0 +1,28 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is .gitignored.
+
+project_id  = "my-livemenu-project"
+region      = "us-central1"
+environment = "prod"
+name_suffix = "abc"           # 3-8 chars, e.g. team initials
+
+# Optional: leave empty to deploy without a managed cert; you can attach DNS
+# and a cert manually after the LB IP exists.
+domain_name = "livemenu.example.com"
+
+# Cloud SQL sizing — bump for prod.
+db_tier         = "db-custom-1-3840"
+db_disk_size_gb = 20
+
+# Backups & rotation (Entrega 2 minimums).
+db_backup_retention_days = 15
+secret_rotation_seconds  = 3456000  # 40 days
+
+# Optional Cloud Armor knobs.
+allowed_geo_codes      = []          # ["CO", "US", "MX"] etc.
+rate_limit_rpm_per_ip  = 600
+
+# Set by CI/CD; leave as "latest" for manual applies.
+image_tag = "latest"
+
+# Origins allowed to call the API. Should match the LB hostname.
+cors_origins = "https://livemenu.example.com"

@@ -1,7 +1,7 @@
 """Refresh token repository for database operations."""
 import hashlib
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +28,7 @@ class RefreshTokenRepository:
     ) -> RefreshToken:
         """Create a new refresh token record."""
         token_hash = self.hash_token(token)
-        expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+        expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
         
         refresh_token = RefreshToken(
             user_id=user_id,
@@ -58,7 +58,7 @@ class RefreshTokenRepository:
         if refresh_token.revoked_at is not None:
             return False
         
-        if refresh_token.expires_at < datetime.utcnow():
+        if refresh_token.expires_at < datetime.now(timezone.utc):
             return False
         
         return True
@@ -67,7 +67,7 @@ class RefreshTokenRepository:
         """Revoke a refresh token."""
         refresh_token = await self.get_by_token(token)
         if refresh_token:
-            refresh_token.revoked_at = datetime.utcnow()
+            refresh_token.revoked_at = datetime.now(timezone.utc)
             await self.session.commit()
     
     async def revoke_all_for_user(self, user_id: uuid.UUID) -> None:
@@ -79,7 +79,7 @@ class RefreshTokenRepository:
         )
         tokens = result.scalars().all()
         
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         for token in tokens:
             token.revoked_at = now
         
