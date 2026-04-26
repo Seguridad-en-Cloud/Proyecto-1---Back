@@ -94,15 +94,18 @@ async def process_and_upload_image(
     prefix: str,
     original_filename: str,
 ) -> dict[str, str]:
-    """Process image into variants and upload all to S3.
+    """Process image into variants and upload all to storage.
 
-    Enqueues the work into the asyncio.Queue and awaits the result,
-    so processing is coordinated through the worker pool.
+    Inline implementation: image variants are processed in a thread pool
+    (CPU-bound PIL work) and uploaded to GCS in parallel. Cloud Run already
+    gives us per-request concurrency, so the previous queue-based worker
+    pool added complexity without throughput benefit and was a source of
+    "request hangs forever" bugs when the lifespan failed silently.
 
     Args:
         file_bytes: Raw uploaded file bytes.
         content_type: MIME type of the uploaded file.
-        prefix: S3 folder prefix ('logos' or 'dishes').
+        prefix: Storage folder prefix ('logos' or 'dishes').
         original_filename: Original filename from the upload.
 
     Returns:
@@ -121,20 +124,42 @@ async def process_and_upload_image(
             f"Invalid file type. Allowed: {', '.join(ALLOWED_CONTENT_TYPES)}"
         )
 
-    # Create a future that the worker will resolve
-    result_future: asyncio.Future[dict[str, str]] = asyncio.get_event_loop().create_future()
+    loop = asyncio.get_event_loop()
+    executor = _get_executor()
 
-    # Enqueue the job
-    job = {
-        "file_bytes": file_bytes,
-        "prefix": prefix,
-        "original_filename": original_filename,
-        "future": result_future,
-    }
-    await get_job_queue().put(job)
+    # 1) Resize variants in parallel (CPU-bound, runs in ThreadPool).
+    logger.info(
+        "Processing %d variants for %s", len(IMAGE_VARIANTS), original_filename
+    )
+    processing_tasks = {}
+    for variant_name, spec in IMAGE_VARIANTS.items():
+        func = partial(
+            _process_image_variant,
+            file_bytes,
+            spec["size"],
+            spec["quality"],
+        )
+        processing_tasks[variant_name] = loop.run_in_executor(executor, func)
 
-    # Await the result from the worker
-    return await result_future
+    variant_data: dict[str, bytes] = {}
+    for name, task in processing_tasks.items():
+        variant_data[name] = await task
+
+    # 2) Upload each variant (I/O-bound, runs in default thread pool).
+    async def _upload_one(name: str, payload: bytes) -> tuple[str, str]:
+        key = generate_object_key(f"{prefix}/{name}", original_filename)
+        key = key.rsplit(".", 1)[0] + ".webp"
+        url = await loop.run_in_executor(
+            None, upload_file_to_s3, payload, key, "image/webp"
+        )
+        return name, url
+
+    upload_results = await asyncio.gather(
+        *[_upload_one(n, b) for n, b in variant_data.items()]
+    )
+    urls = {name: url for name, url in upload_results}
+    logger.info("Uploaded variants for %s: %s", original_filename, list(urls))
+    return urls
 
 
 async def _process_job(job: dict[str, Any]) -> None:
@@ -213,13 +238,17 @@ async def _worker(worker_id: int) -> None:
 
 
 async def start_workers() -> None:
-    """Start the async worker pool (called on app startup)."""
-    global _workers
-    num = settings.image_worker_count
-    for i in range(num):
-        task = asyncio.create_task(_worker(i))
-        _workers.append(task)
-    logger.info("Started %d image processing workers", num)
+    """No-op kept for backwards compatibility with the lifespan handler.
+
+    The original worker-pool architecture pulled jobs from an ``asyncio.Queue``
+    and resolved a per-job ``Future``. On Cloud Run that pattern is fragile:
+    if any startup error keeps workers from spawning (silently failing
+    lifespan, ``ConnectorLoopError`` during init, …) every upload request
+    hangs forever waiting on a future no one resolves. Cloud Run already
+    gives us per-request concurrency, so we now process inline in
+    ``process_and_upload_image`` and this function is just a marker.
+    """
+    logger.info("Worker pool disabled — uploads run inline (Cloud Run concurrency).")
 
 
 async def shutdown_workers() -> None:
