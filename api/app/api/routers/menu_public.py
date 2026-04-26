@@ -99,5 +99,4 @@ async def render_menu(
         "hours": json.dumps(menu.hours) if menu.hours else "{}",
         "categories": categories_data,
     }
-    
-    return templates.TemplateResponse("menu.html", context_data)
+    return templates.TemplateResponse(request=request, name="menu.html", context=context_data)

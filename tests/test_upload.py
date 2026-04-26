@@ -45,7 +45,7 @@ async def test_upload_requires_restaurant(client: AsyncClient, auth_headers: dic
 
 
 @pytest.mark.asyncio
-@patch("app.services.upload_service.process_and_upload_image")
+@patch("app.api.routers.upload.process_and_upload_image")
 async def test_upload_image_success(
     mock_upload,
     client: AsyncClient,
@@ -74,7 +74,7 @@ async def test_upload_image_success(
 
 
 @pytest.mark.asyncio
-@patch("app.services.upload_service.process_and_upload_image")
+@patch("app.api.routers.upload.process_and_upload_image")
 async def test_upload_invalid_type(
     mock_upload,
     client: AsyncClient,
