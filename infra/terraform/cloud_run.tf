@@ -197,6 +197,20 @@ resource "google_cloud_run_v2_service" "api" {
   }
 }
 
+# Allow public invocations through the load balancer.
+# Defense in depth: ``ingress = INTERNAL_LB`` already restricts where the
+# request comes from, so granting ``allUsers`` the invoker role does NOT
+# expose the service to direct ``*.run.app`` access — only the LB path is
+# reachable. Cloud Armor + WAF still gate the traffic before it reaches
+# Cloud Run.
+resource "google_cloud_run_v2_service_iam_member" "api_public" {
+  project  = google_cloud_run_v2_service.api.project
+  location = google_cloud_run_v2_service.api.location
+  name     = google_cloud_run_v2_service.api.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
 # ── Frontend (nginx-unprivileged) ─────────────────────────────────────────
 resource "google_cloud_run_v2_service" "frontend" {
   name     = "livemenu-frontend-${local.name_suffix}"
@@ -243,4 +257,14 @@ resource "google_cloud_run_v2_service" "frontend" {
       client_version,
     ]
   }
+}
+
+# Same rationale as api_public above — the LB must be able to invoke the
+# frontend Cloud Run service on behalf of public users.
+resource "google_cloud_run_v2_service_iam_member" "frontend_public" {
+  project  = google_cloud_run_v2_service.frontend.project
+  location = google_cloud_run_v2_service.frontend.location
+  name     = google_cloud_run_v2_service.frontend.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }
