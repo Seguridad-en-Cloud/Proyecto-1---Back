@@ -43,16 +43,12 @@ async def lifespan(app: FastAPI):
         start_workers,
     )
 
-    from database.session import init_connector, close_connector
-
-    await init_connector()
     await start_workers()
     install_signal_handlers()
     try:
         yield
     finally:
         await shutdown_workers()
-        await close_connector()
 
 
 app = FastAPI(
