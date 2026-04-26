@@ -25,12 +25,11 @@ engine: AsyncEngine | None = None
 AsyncSessionLocal: async_sessionmaker | None = None
 _connector = None
 
-async def init_connector():
-    """Initialize the Cloud SQL Connector and SQLAlchemy Engine in the FastAPI lifespan.
-    This guarantees both bind to the exact same asyncio event loop, preventing ConnectorLoopError.
-    """
+async def _init_db_if_needed():
     global engine, AsyncSessionLocal, _connector
-    
+    if engine is not None:
+        return
+
     db_user = settings.db_user or get_secret("DB_USER") or "livemenu"
     db_pass = get_secret("DB_PASSWORD") or ""
     db_name = settings.db_name or get_secret("DB_NAME") or "livemenu"
@@ -89,6 +88,7 @@ async def close_connector():
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency that yields a managed async session."""
+    await _init_db_if_needed()
     if AsyncSessionLocal is None:
         raise RuntimeError("Database not initialized")
         
