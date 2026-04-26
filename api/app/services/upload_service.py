@@ -17,7 +17,12 @@ from typing import Any
 from PIL import Image
 
 from app.core.config import settings
-from app.core.storage import delete_file_from_s3, generate_object_key, upload_file_to_s3
+from app.core.storage import (
+    delete_file_from_s3,
+    generate_object_key,
+    get_public_prefix,
+    upload_file_to_s3,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -247,13 +252,14 @@ def install_signal_handlers() -> None:
 
 
 async def delete_image(url: str) -> None:
-    """Delete an image from S3 by its public URL.
+    """Delete an image from object storage by its public URL.
 
-    Args:
-        url: The full public URL of the image.
+    Works with both the S3/MinIO and the GCS backend by stripping the
+    backend's public prefix to recover the object key.
     """
-    # Extract the key from the URL
-    public_prefix = settings.s3_public_url.rstrip("/")
+    public_prefix = get_public_prefix().rstrip("/")
     if url.startswith(public_prefix):
         key = url[len(public_prefix) + 1 :]
         delete_file_from_s3(key)
+    else:
+        logger.warning("delete_image called with foreign URL: %s", url)

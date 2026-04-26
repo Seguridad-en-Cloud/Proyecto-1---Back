@@ -101,9 +101,9 @@ async def test_process_and_upload_success(mock_key, mock_upload):
 
 @pytest.mark.asyncio
 @patch("app.services.upload_service.delete_file_from_s3")
-@patch("app.services.upload_service.settings")
-async def test_delete_image_success(mock_settings, mock_delete):
-    mock_settings.s3_public_url = "http://minio:9000/livemenu"
+@patch("app.services.upload_service.get_public_prefix")
+async def test_delete_image_success(mock_prefix, mock_delete):
+    mock_prefix.return_value = "http://minio:9000/livemenu"
     url = "http://minio:9000/livemenu/dishes/abc.webp"
     await delete_image(url)
     mock_delete.assert_called_once_with("dishes/abc.webp")
@@ -111,10 +111,10 @@ async def test_delete_image_success(mock_settings, mock_delete):
 
 @pytest.mark.asyncio
 @patch("app.services.upload_service.delete_file_from_s3")
-@patch("app.services.upload_service.settings")
-async def test_delete_image_foreign_url(mock_settings, mock_delete):
-    """URL that does not start with s3_public_url should not trigger delete."""
-    mock_settings.s3_public_url = "http://minio:9000/livemenu"
+@patch("app.services.upload_service.get_public_prefix")
+async def test_delete_image_foreign_url(mock_prefix, mock_delete):
+    """URL that does not start with the configured prefix should not delete."""
+    mock_prefix.return_value = "http://minio:9000/livemenu"
     url = "http://other-server/image.png"
     await delete_image(url)
     mock_delete.assert_not_called()

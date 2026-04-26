@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Query, UploadFile, status
 
 from app.api.deps import CurrentUserId, DatabaseSession
-from app.core.config import settings
+from app.core.storage import get_public_prefix
 from app.schemas.upload import DeleteResponse, UploadResponse
 from app.services.restaurant_service import RestaurantService
 from app.services.upload_service import delete_image, process_and_upload_image
@@ -79,7 +79,7 @@ async def delete_uploaded_image(
     await service.get_by_owner(user_id)
 
     # Reconstruct the full URL from the filename to delegate to delete_image
-    url = f"{settings.s3_public_url.rstrip('/')}/{filename}"
+    url = f"{get_public_prefix().rstrip('/')}/{filename}"
 
     try:
         await delete_image(url)
