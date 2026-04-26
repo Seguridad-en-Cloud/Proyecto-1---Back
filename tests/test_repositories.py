@@ -1,6 +1,6 @@
 """Unit tests for repositories with mocked AsyncSession."""
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -339,8 +339,8 @@ class TestRefreshTokenRepository:
     async def test_is_valid_revoked(self):
         session = _mock_session()
         token_obj = MagicMock()
-        token_obj.revoked_at = datetime.utcnow()
-        token_obj.expires_at = datetime.utcnow() + timedelta(days=1)
+        token_obj.revoked_at = datetime.now(timezone.utc)
+        token_obj.expires_at = datetime.now(timezone.utc) + timedelta(days=1)
         session.execute = AsyncMock(return_value=_mock_scalar_result(token_obj))
         repo = RefreshTokenRepository(session)
         assert await repo.is_valid("revoked") is False
@@ -350,7 +350,7 @@ class TestRefreshTokenRepository:
         session = _mock_session()
         token_obj = MagicMock()
         token_obj.revoked_at = None
-        token_obj.expires_at = datetime.utcnow() - timedelta(days=1)
+        token_obj.expires_at = datetime.now(timezone.utc) - timedelta(days=1)
         session.execute = AsyncMock(return_value=_mock_scalar_result(token_obj))
         repo = RefreshTokenRepository(session)
         assert await repo.is_valid("expired") is False

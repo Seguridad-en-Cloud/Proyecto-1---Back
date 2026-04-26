@@ -1,6 +1,6 @@
 """Dish repository for database operations."""
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import func, or_, select
@@ -150,7 +150,7 @@ class DishRepository:
     
     async def soft_delete(self, dish: Dish) -> Dish:
         """Soft delete a dish by setting deleted_at timestamp."""
-        dish.deleted_at = datetime.utcnow()
+        dish.deleted_at = datetime.now(timezone.utc)
         await self.session.commit()
         await self.session.refresh(dish)
         return dish

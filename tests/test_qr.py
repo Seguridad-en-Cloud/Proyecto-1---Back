@@ -89,7 +89,7 @@ async def test_qr_invalid_format(client: AsyncClient, restaurant_headers: dict[s
 async def test_qr_contains_correct_url(client: AsyncClient, restaurant_headers: dict[str, str]):
     """Test that QR encodes the right URL (smoke test via successful generation)."""
     response = await client.get(
-        "/api/v1/admin/qr?format=png&size=5",
+        "/api/v1/admin/qr?format=png&size=M",
         headers=restaurant_headers,
     )
 

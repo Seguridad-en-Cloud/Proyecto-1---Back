@@ -1,5 +1,6 @@
 """Public menu HTML renderer - Server Side Rendering."""
 import hashlib
+import json
 import logging
 from pathlib import Path
 
@@ -70,7 +71,7 @@ async def render_menu(
         "logo_url": menu.logo_url,
         "phone": menu.phone,
         "address": menu.address,
-        "hours": menu.hours,
+        "hours": json.dumps(menu.hours) if menu.hours else None,
         "categories": [
             {
                 "name": cat.name,
