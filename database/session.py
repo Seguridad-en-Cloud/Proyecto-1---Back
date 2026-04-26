@@ -73,14 +73,6 @@ def _build_cloud_sql_engine():
     _connector = None
 
     async def _getconn():
-        global _connector
-        if _connector is None:
-            _connector = Connector()
-            
-        # Force the connector to recognize the current loop.
-        # This bypasses the ConnectorLoopError caused by greenlet context switching.
-        _connector._loop = asyncio.get_running_loop()
-            
         return await _connector.connect_async(
             settings.cloud_sql_connection_name,
             "asyncpg",
@@ -111,6 +103,20 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
+
+async def init_connector():
+    """Initialize the Cloud SQL Connector in the FastAPI lifespan."""
+    global _connector
+    if settings.cloud_sql_connection_name:
+        from google.cloud.sql.connector import Connector
+        _connector = Connector()
+
+async def close_connector():
+    """Close the Cloud SQL Connector cleanly."""
+    global _connector
+    if _connector:
+        await _connector.close()
+
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
