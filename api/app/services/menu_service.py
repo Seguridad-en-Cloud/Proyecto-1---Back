@@ -5,6 +5,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select
 
 from app.core.cache import cache_get, cache_set
+from app.models.category import Category
 from app.repositories.restaurant_repo import RestaurantRepository
 from app.schemas.menu import MenuCategoryResponse, MenuDishResponse, MenuResponse
 
