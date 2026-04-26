@@ -19,6 +19,23 @@
 locals {
   api_image      = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}/api:${var.image_tag}"
   frontend_image = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.containers.repository_id}/frontend:${var.image_tag}"
+
+  # Public Google placeholder used the first time we apply, before CI has
+  # pushed any image to Artifact Registry. After the first CI run the real
+  # image is in place and Terraform must NOT roll it back, so we
+  # ignore_changes on the container image (see lifecycle blocks below).
+  placeholder_image = "us-docker.pkg.dev/cloudrun/container/hello"
+}
+
+# Detect whether the real images exist yet. If terraform has never seen a
+# successful CI run, fall back to the placeholder. We can't actually probe
+# Artifact Registry from Terraform, so we use a variable: ``image_tag = "latest"``
+# means "first apply, use placeholder"; any other value means "deploy the
+# image CI tagged with that SHA".
+locals {
+  use_placeholder = var.image_tag == "latest"
+  api_image_effective      = local.use_placeholder ? local.placeholder_image : local.api_image
+  frontend_image_effective = local.use_placeholder ? local.placeholder_image : local.frontend_image
 }
 
 # ── Backend (FastAPI) ────────────────────────────────────────────────────
@@ -42,7 +59,7 @@ resource "google_cloud_run_v2_service" "api" {
     }
 
     containers {
-      image = local.api_image
+      image = local.api_image_effective
 
       ports {
         container_port = 8000
@@ -167,6 +184,17 @@ resource "google_cloud_run_v2_service" "api" {
     google_secret_manager_secret_version.ip_salt,
     google_secret_manager_secret_version.db_password,
   ]
+
+  # CI/CD owns the container image after the first deploy. Without this
+  # block, the next ``terraform apply`` would roll the service back to the
+  # placeholder (or to var.image_tag="latest") and break production.
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
 }
 
 # ── Frontend (nginx-unprivileged) ─────────────────────────────────────────
@@ -185,7 +213,7 @@ resource "google_cloud_run_v2_service" "frontend" {
     }
 
     containers {
-      image = local.frontend_image
+      image = local.frontend_image_effective
 
       ports {
         container_port = 8080
@@ -207,4 +235,12 @@ resource "google_cloud_run_v2_service" "frontend" {
   }
 
   labels = local.labels
+
+  lifecycle {
+    ignore_changes = [
+      template[0].containers[0].image,
+      client,
+      client_version,
+    ]
+  }
 }

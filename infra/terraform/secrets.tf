@@ -24,10 +24,22 @@ data "google_project" "current" {
   project_id = var.project_id
 }
 
+# Force-create the Secret Manager service identity. Just enabling the API
+# does NOT create the agent service account — it only appears the first
+# time the project consumes the API. Without this resource, the IAM binding
+# below races and fails with "service account does not exist".
+resource "google_project_service_identity" "secretmanager" {
+  provider = google-beta
+  project  = var.project_id
+  service  = "secretmanager.googleapis.com"
+
+  depends_on = [google_project_service.enabled]
+}
+
 resource "google_pubsub_topic_iam_member" "secretmanager_publisher" {
   topic  = google_pubsub_topic.secret_rotation.name
   role   = "roles/pubsub.publisher"
-  member = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-secretmanager.iam.gserviceaccount.com"
+  member = "serviceAccount:${google_project_service_identity.secretmanager.email}"
 }
 
 # ── Helper: factory for "rotating" secrets ───────────────────────────────
