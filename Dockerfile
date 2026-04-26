@@ -70,6 +70,9 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS "http://localhost:${PORT}/api/v1/auth/health" || exit 1
 
-# ``alembic upgrade head`` runs migrations on every start. Cloud Run scales to
-# zero, so this is idempotent and adds ~200ms to a cold start.
-CMD ["sh", "-c", "alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+# Migrations are NOT run on every startup. Reason: alembic uses a synchronous
+# engine that doesn't know about the Cloud SQL Connector, so it would hang on
+# cold start and Cloud Run would kill the container before it binds the port.
+# Migrations are applied out-of-band (one-off Cloud Run job, manual gcloud
+# run jobs execute, or a release-time CI step). See docs/GUIA-DESPLIEGUE.md.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
