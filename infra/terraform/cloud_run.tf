@@ -26,8 +26,7 @@ resource "google_cloud_run_v2_service" "api" {
   name     = "livemenu-api-${local.name_suffix}"
   location = var.region
 
-  ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
-  deletion_protection = false
+  ingress = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   template {
     service_account = google_service_account.api.email
@@ -175,8 +174,7 @@ resource "google_cloud_run_v2_service" "frontend" {
   name     = "livemenu-frontend-${local.name_suffix}"
   location = var.region
 
-  ingress             = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
-  deletion_protection = false
+  ingress = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 
   template {
     service_account = google_service_account.frontend.email
