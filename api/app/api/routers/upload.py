@@ -39,6 +39,7 @@ async def upload_image(
     service = RestaurantService(session)
     await service.get_by_owner(user_id)
 
+    logger.info("Received upload request for file: %s (size: %s bytes)", file.filename, file.size)
     file_bytes = await file.read()
     content_type = file.content_type or "application/octet-stream"
 

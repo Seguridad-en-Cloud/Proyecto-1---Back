@@ -10,7 +10,7 @@ import asyncio
 import io
 import logging
 import signal
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from typing import Any
 
@@ -37,17 +37,17 @@ ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_SIZE_BYTES = settings.image_max_size_mb * 1024 * 1024
 
 # ── Worker pool globals ──
-_executor: ProcessPoolExecutor | None = None
+_executor: ThreadPoolExecutor | None = None
 _job_queue: asyncio.Queue[dict[str, Any]] | None = None
 _workers: list[asyncio.Task[None]] = []
 _shutting_down = False
 
 
-def _get_executor() -> ProcessPoolExecutor:
-    """Get or create the process pool executor (lazy singleton)."""
+def _get_executor() -> ThreadPoolExecutor:
+    """Get or create the thread pool executor (lazy singleton)."""
     global _executor
     if _executor is None:
-        _executor = ProcessPoolExecutor(max_workers=settings.image_worker_count)
+        _executor = ThreadPoolExecutor(max_workers=settings.image_worker_count)
     return _executor
 
 
