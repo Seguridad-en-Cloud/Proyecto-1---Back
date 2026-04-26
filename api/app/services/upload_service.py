@@ -140,16 +140,18 @@ async def process_and_upload_image(
 async def _process_job(job: dict[str, Any]) -> None:
     """Process a single image job from the queue.
 
-    Runs image processing in the ProcessPoolExecutor, uploads results,
-    and resolves the job's future with the URLs.
+    Runs image processing in the ProcessPoolExecutor and uploads results
+    in parallel to storage, resolving the job's future with the URLs.
     """
     loop = asyncio.get_event_loop()
     executor = _get_executor()
     future: asyncio.Future[dict[str, str]] = job["future"]
+    filename = job["original_filename"]
 
     try:
-        urls: dict[str, str] = {}
-        tasks = {}
+        # 1. Process all variants in parallel (CPU-bound)
+        logger.info("Generating %d variants for image: %s", len(IMAGE_VARIANTS), filename)
+        processing_tasks = {}
         for variant_name, spec in IMAGE_VARIANTS.items():
             func = partial(
                 _process_image_variant,
@@ -157,19 +159,38 @@ async def _process_job(job: dict[str, Any]) -> None:
                 spec["size"],
                 spec["quality"],
             )
-            tasks[variant_name] = loop.run_in_executor(executor, func)
+            processing_tasks[variant_name] = loop.run_in_executor(executor, func)
 
-        for variant_name, task in tasks.items():
-            processed_bytes = await task
+        # Await all processing to finish
+        variant_data = {}
+        for name, task in processing_tasks.items():
+            variant_data[name] = await task
+
+        # 2. Upload all variants in parallel (I/O-bound)
+        logger.info("Uploading variants to storage for: %s", filename)
+
+        async def _upload_task(name: str, p_bytes: bytes) -> tuple[str, str]:
             key = generate_object_key(
-                f"{job['prefix']}/{variant_name}", job["original_filename"]
+                f"{job['prefix']}/{name}", filename
             )
             key = key.rsplit(".", 1)[0] + ".webp"
-            url = upload_file_to_s3(processed_bytes, key, "image/webp")
-            urls[variant_name] = url
+            # run_in_executor(None, ...) uses the default ThreadPoolExecutor for I/O
+            url = await loop.run_in_executor(
+                None, upload_file_to_s3, p_bytes, key, "image/webp"
+            )
+            return name, url
 
+        upload_coros = [
+            _upload_task(name, b) for name, b in variant_data.items()
+        ]
+        upload_results = await asyncio.gather(*upload_coros)
+        
+        urls = {name: url for name, url in upload_results}
+        logger.info("Successfully processed and uploaded: %s", filename)
         future.set_result(urls)
+
     except Exception as exc:
+        logger.exception("Failed to process image job for %s", filename)
         if not future.done():
             future.set_exception(exc)
 
@@ -177,11 +198,11 @@ async def _process_job(job: dict[str, Any]) -> None:
 async def _worker(worker_id: int) -> None:
     """Worker coroutine that pulls jobs from the queue and processes them."""
     queue = get_job_queue()
-    logger.info("Image worker %d started", worker_id)
+    logger.info("Image worker %d ready", worker_id)
     while True:
         try:
             job = await queue.get()
-            logger.debug("Worker %d processing job", worker_id)
+            logger.info("Worker %d started processing: %s", worker_id, job["original_filename"])
             await _process_job(job)
             queue.task_done()
         except asyncio.CancelledError:
