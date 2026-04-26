@@ -39,6 +39,7 @@ dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.1.0",
+    "pytest-timeout>=2.3.0",
     "httpx>=0.26.0",
     "ruff>=0.1.11",
 ]
@@ -68,7 +69,10 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short --strict-markers"
+# --timeout=30: kills any test that runs longer than 30s. The worker pool
+# tests can hang forever now that workers only spin up via the lifespan
+# context manager (they do not auto-start when app is imported).
+addopts = "-v --tb=short --strict-markers --timeout=30"
 
 [tool.coverage.run]
 source = ["app"]
