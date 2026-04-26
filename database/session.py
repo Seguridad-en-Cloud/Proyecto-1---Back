@@ -11,7 +11,7 @@ Two modes:
 """
 from __future__ import annotations
 
-
+import asyncio
 import logging
 from typing import AsyncGenerator
 
@@ -77,6 +77,10 @@ def _build_cloud_sql_engine():
         if _connector is None:
             _connector = Connector()
             
+        # Force the connector to recognize the current loop.
+        # This bypasses the ConnectorLoopError caused by greenlet context switching.
+        _connector._loop = asyncio.get_running_loop()
+            
         return await _connector.connect_async(
             settings.cloud_sql_connection_name,
             "asyncpg",
@@ -111,11 +115,6 @@ AsyncSessionLocal = async_sessionmaker(
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """FastAPI dependency that yields a managed async session."""
-    global _connector
-    if _connector is None and settings.cloud_sql_connection_name:
-        from google.cloud.sql.connector import Connector
-        _connector = Connector()
-
     async with AsyncSessionLocal() as session:
         try:
             yield session
