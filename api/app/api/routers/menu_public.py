@@ -86,16 +86,17 @@ async def render_menu(
             "dishes": dishes_data,
         })
 
-    # Force all data to be JSON-serializable (no SQLAlchemy objects)
+    # Force all data to be JSON-serializable primitives (no objects)
+    # request is passed implicitly by Starlette for template context injection
     context_data = {
         "request": request,
-        "restaurant_name": menu.restaurant_name,
-        "restaurant_slug": menu.restaurant_slug,
-        "description": menu.description,
-        "logo_url": menu.logo_url,
-        "phone": menu.phone,
-        "address": menu.address,
-        "hours": json.dumps(menu.hours) if menu.hours else None,
+        "restaurant_name": str(menu.restaurant_name) if menu.restaurant_name else "",
+        "restaurant_slug": str(menu.restaurant_slug) if menu.restaurant_slug else "",
+        "description": str(menu.description) if menu.description else "",
+        "logo_url": str(menu.logo_url) if menu.logo_url else "",
+        "phone": str(menu.phone) if menu.phone else "",
+        "address": str(menu.address) if menu.address else "",
+        "hours": json.dumps(menu.hours) if menu.hours else "{}",
         "categories": categories_data,
     }
     

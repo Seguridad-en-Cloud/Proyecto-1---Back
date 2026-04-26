@@ -28,6 +28,7 @@ def create_access_token(user_id: uuid.UUID, email: str) -> str:
         "iat": now,
         "nbf": now,
         "exp": now + expires_delta,
+        "jti": str(uuid.uuid4()),  # Unique JWT ID
     }
     
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -53,6 +54,7 @@ def create_refresh_token(user_id: uuid.UUID, email: str) -> str:
         "iat": now,
         "nbf": now,
         "exp": now + expires_delta,
+        "jti": str(uuid.uuid4()),  # Unique JWT ID to prevent duplicates
     }
     
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

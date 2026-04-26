@@ -95,8 +95,14 @@ async def auth_headers(client: AsyncClient) -> dict[str, str]:
 
 
 @pytest.fixture(autouse=True)
-def mock_storage():
-    """Mock S3Storage to avoid connecting to MinIO/GCS during tests."""
+def reset_storage_backend():
+    """Reset and mock storage backend to avoid connecting to MinIO/GCS."""
+    import app.core.storage
+    
+    # Reset the global _backend variable
+    app.core.storage._backend = None
+    
+    # Create mock backend
     mock_backend = MagicMock()
     mock_backend.upload.return_value = "http://mock-storage/bucket/test-image.webp"
     mock_backend.delete.return_value = None
@@ -104,3 +110,6 @@ def mock_storage():
     
     with patch("app.core.storage.get_storage", return_value=mock_backend):
         yield mock_backend
+    
+    # Reset again after test
+    app.core.storage._backend = None
