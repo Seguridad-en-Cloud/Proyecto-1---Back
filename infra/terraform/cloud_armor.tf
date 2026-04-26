@@ -21,7 +21,7 @@ resource "google_compute_security_policy" "waf" {
     priority = 1000
     match {
       expr {
-        expression = "evaluatePreconfiguredWaf('sqli-v33-stable', {'sensitivity': 1})"
+        expression = "evaluatePreconfiguredWaf('sqli-v33-stable', {'sensitivity': 1}) && !request.path.matches('/api/v1/admin/upload')"
       }
     }
     description = "OWASP A03:2021 Injection — SQLi"
@@ -32,7 +32,7 @@ resource "google_compute_security_policy" "waf" {
     priority = 1010
     match {
       expr {
-        expression = "evaluatePreconfiguredWaf('xss-v33-stable', {'sensitivity': 1})"
+        expression = "evaluatePreconfiguredWaf('xss-v33-stable', {'sensitivity': 1}) && !request.path.matches('/api/v1/admin/upload')"
       }
     }
     description = "OWASP A03:2021 Injection — XSS"
@@ -65,7 +65,7 @@ resource "google_compute_security_policy" "waf" {
     priority = 1040
     match {
       expr {
-        expression = "evaluatePreconfiguredWaf('rce-v33-stable', {'sensitivity': 1})"
+        expression = "evaluatePreconfiguredWaf('rce-v33-stable', {'sensitivity': 1}) && !request.path.matches('/api/v1/admin/upload')"
       }
     }
     description = "Remote code execution"
@@ -87,7 +87,7 @@ resource "google_compute_security_policy" "waf" {
     priority = 1060
     match {
       expr {
-        expression = "evaluatePreconfiguredWaf('protocolattack-v33-stable', {'sensitivity': 1})"
+        expression = "evaluatePreconfiguredWaf('protocolattack-v33-stable', {'sensitivity': 1}) && !request.path.matches('/api/v1/admin/upload')"
       }
     }
     description = "HTTP protocol attacks"
