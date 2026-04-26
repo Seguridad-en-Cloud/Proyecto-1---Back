@@ -40,7 +40,21 @@ def _build_engine():
 
 
 def _build_cloud_sql_engine():
-    """Build an engine that talks to Cloud SQL through the official connector."""
+    """Build an engine that talks to Cloud SQL through the official connector.
+
+    The ``Connector`` instance MUST be constructed in the same event loop that
+    will later call ``connect_async()`` — the connector captures the loop on
+    ``__init__`` and refuses requests from any other loop. If we built it at
+    module-import time, it would attach to whatever default loop existed
+    before uvicorn started; the first real request would then fail with::
+
+        google.cloud.sql.connector.exceptions.ConnectorLoopError:
+        Running event loop does not match 'connector._loop'.
+
+    To avoid that, we build the connector lazily inside ``_getconn``, which
+    SQLAlchemy invokes from the running uvicorn loop on first connection
+    request and reuses thereafter.
+    """
     try:
         from google.cloud.sql.connector import Connector, IPTypes  # type: ignore
     except ImportError as exc:
@@ -50,20 +64,24 @@ def _build_cloud_sql_engine():
             "requirements."
         ) from exc
 
-    connector = Connector(refresh_strategy="lazy")
-
     db_user = settings.db_user or get_secret("DB_USER") or "livemenu"
     db_pass = get_secret("DB_PASSWORD") or ""
     db_name = settings.db_name or get_secret("DB_NAME") or "livemenu"
 
+    # Mutable holder so the closure can lazily populate the singleton.
+    _state: dict[str, object] = {"connector": None}
+
     async def _getconn():
-        return await connector.connect_async(
+        if _state["connector"] is None:
+            _state["connector"] = Connector(refresh_strategy="lazy")
+        connector = _state["connector"]
+        return await connector.connect_async(  # type: ignore[union-attr]
             settings.cloud_sql_connection_name,
             "asyncpg",
             user=db_user,
             password=db_pass,
             db=db_name,
-            ip_type=IPTypes.PRIVATE,  # routed through the VPC, not over the public internet
+            ip_type=IPTypes.PRIVATE,
         )
 
     return create_async_engine(
