@@ -24,6 +24,7 @@ permissions:
   contents: read
   id-token: write       # required for Workload Identity Federation
   pull-requests: write  # so trivy can comment scan summary on PRs
+  security-events: write # required to upload SARIF results
 
 env:
   IMAGE_NAME: api
