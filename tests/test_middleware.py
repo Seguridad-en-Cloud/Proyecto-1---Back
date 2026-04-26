@@ -1,5 +1,5 @@
 """Unit tests for middleware: request_id and errors."""
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException

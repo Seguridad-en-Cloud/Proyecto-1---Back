@@ -132,11 +132,13 @@ class AuthService:
             
             return new_access_token, new_refresh_token
             
-        except Exception:
+        except HTTPException:
+            raise
+        except Exception as err:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired refresh token",
-            )
+            ) from err
     
     async def logout(self, user_id: uuid.UUID) -> None:
         """Logout user by revoking all refresh tokens.

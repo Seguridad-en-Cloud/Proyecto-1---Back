@@ -3,12 +3,18 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.category import Category
+    from app.models.scan_event import ScanEvent
 
 
 class Restaurant(Base):
@@ -48,13 +54,13 @@ class Restaurant(Base):
     )
     
     # Relationships
-    owner: Mapped["User"] = relationship("User", back_populates="restaurant")
-    categories: Mapped[list["Category"]] = relationship(
+    owner: Mapped[User] = relationship("User", back_populates="restaurant")
+    categories: Mapped[list[Category]] = relationship(
         "Category",
         back_populates="restaurant",
         cascade="all, delete-orphan"
     )
-    scan_events: Mapped[list["ScanEvent"]] = relationship(
+    scan_events: Mapped[list[ScanEvent]] = relationship(
         "ScanEvent",
         back_populates="restaurant",
         cascade="all, delete-orphan"

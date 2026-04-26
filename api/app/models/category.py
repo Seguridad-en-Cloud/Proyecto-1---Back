@@ -3,12 +3,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.restaurant import Restaurant
+    from app.models.dish import Dish
 
 
 class Category(Base):
@@ -44,8 +49,8 @@ class Category(Base):
     )
     
     # Relationships
-    restaurant: Mapped["Restaurant"] = relationship("Restaurant", back_populates="categories")
-    dishes: Mapped[list["Dish"]] = relationship(
+    restaurant: Mapped[Restaurant] = relationship("Restaurant", back_populates="categories")
+    dishes: Mapped[list[Dish]] = relationship(
         "Dish",
         back_populates="category",
         cascade="all, delete-orphan"

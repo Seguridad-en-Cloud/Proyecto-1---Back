@@ -1,7 +1,7 @@
 """Category repository for database operations."""
 import uuid
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.category import Category

@@ -1,7 +1,7 @@
 """Unit tests for repositories with mocked AsyncSession."""
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -53,7 +53,7 @@ class TestUserRepository:
     async def test_create(self):
         session = _mock_session()
         repo = UserRepository(session)
-        result = await repo.create("test@example.com", "hash123")
+        await repo.create("test@example.com", "hash123")
         session.add.assert_called_once()
         session.commit.assert_awaited_once()
         session.refresh.assert_awaited_once()
@@ -145,7 +145,7 @@ class TestRestaurantRepository:
         rest = MagicMock()
         rest.name = "Old"
         repo = RestaurantRepository(session)
-        result = await repo.update(rest, name="New")
+        await repo.update(rest, name="New")
         assert rest.name == "New"
         session.commit.assert_awaited_once()
 
@@ -184,7 +184,7 @@ class TestCategoryRepository:
         # get_next_position needs to work
         session.execute = AsyncMock(return_value=_mock_scalar_one_result(2))
         repo = CategoryRepository(session)
-        result = await repo.create(
+        await repo.create(
             restaurant_id=uuid.uuid4(), name="Drinks"
         )
         session.add.assert_called_once()
@@ -193,7 +193,7 @@ class TestCategoryRepository:
     async def test_create_with_position(self):
         session = _mock_session()
         repo = CategoryRepository(session)
-        result = await repo.create(
+        await repo.create(
             restaurant_id=uuid.uuid4(), name="Drinks", position=5
         )
         session.add.assert_called_once()
@@ -212,16 +212,16 @@ class TestCategoryRepository:
         cats = [MagicMock(), MagicMock()]
         session.execute = AsyncMock(return_value=_mock_scalars_result(cats))
         repo = CategoryRepository(session)
-        result = await repo.list_by_restaurant(uuid.uuid4())
-        assert len(result) == 2
+        items = await repo.list_by_restaurant(uuid.uuid4())
+        assert len(items) == 2
 
     @pytest.mark.asyncio
     async def test_list_by_restaurant_active_only(self):
         session = _mock_session()
         session.execute = AsyncMock(return_value=_mock_scalars_result([]))
         repo = CategoryRepository(session)
-        result = await repo.list_by_restaurant(uuid.uuid4(), active_only=True)
-        assert len(result) == 0
+        items = await repo.list_by_restaurant(uuid.uuid4(), active_only=True)
+        assert len(items) == 0
 
     @pytest.mark.asyncio
     async def test_update(self):
@@ -229,7 +229,7 @@ class TestCategoryRepository:
         cat = MagicMock()
         cat.name = "Old"
         repo = CategoryRepository(session)
-        result = await repo.update(cat, name="New")
+        updated = await repo.update(cat, name="New")
         assert cat.name == "New"
 
     @pytest.mark.asyncio
@@ -259,16 +259,16 @@ class TestCategoryRepository:
         session = _mock_session()
         session.execute = AsyncMock(return_value=_mock_scalar_result(4))
         repo = CategoryRepository(session)
-        result = await repo.get_next_position(uuid.uuid4())
-        assert result == 5
+        pos = await repo.get_next_position(uuid.uuid4())
+        assert pos == 5
 
     @pytest.mark.asyncio
     async def test_get_next_position_none(self):
         session = _mock_session()
         session.execute = AsyncMock(return_value=_mock_scalar_result(None))
         repo = CategoryRepository(session)
-        result = await repo.get_next_position(uuid.uuid4())
-        assert result == 0
+        pos = await repo.get_next_position(uuid.uuid4())
+        assert pos == 0
 
     @pytest.mark.asyncio
     async def test_reorder_categories(self):
@@ -295,7 +295,7 @@ class TestRefreshTokenRepository:
     async def test_create(self):
         session = _mock_session()
         repo = RefreshTokenRepository(session)
-        result = await repo.create(
+        await repo.create(
             user_id=uuid.uuid4(), token="abc", expires_in_days=7
         )
         session.add.assert_called_once()
@@ -307,16 +307,16 @@ class TestRefreshTokenRepository:
         token_obj = MagicMock()
         session.execute = AsyncMock(return_value=_mock_scalar_result(token_obj))
         repo = RefreshTokenRepository(session)
-        result = await repo.get_by_token("abc")
-        assert result == token_obj
+        item = await repo.get_by_token("abc")
+        assert item == token_obj
 
     @pytest.mark.asyncio
     async def test_get_by_token_not_found(self):
         session = _mock_session()
         session.execute = AsyncMock(return_value=_mock_scalar_result(None))
         repo = RefreshTokenRepository(session)
-        result = await repo.get_by_token("missing")
-        assert result is None
+        item = await repo.get_by_token("missing")
+        assert item is None
 
     @pytest.mark.asyncio
     async def test_is_valid_true(self):
@@ -408,7 +408,7 @@ class TestDishRepository:
         dish = MagicMock()
         dish.name = "Old"
         repo = DishRepository(session)
-        result = await repo.update(dish, name="New", price="15.00")
+        updated = await repo.update(dish, name="New", price="15.00")
         assert dish.name == "New"
 
     @pytest.mark.asyncio
@@ -417,7 +417,7 @@ class TestDishRepository:
         dish = MagicMock()
         dish.deleted_at = None
         repo = DishRepository(session)
-        result = await repo.soft_delete(dish)
+        deleted = await repo.soft_delete(dish)
         assert dish.deleted_at is not None
 
     @pytest.mark.asyncio
@@ -426,7 +426,7 @@ class TestDishRepository:
         dish = MagicMock()
         dish.available = True
         repo = DishRepository(session)
-        result = await repo.toggle_availability(dish)
+        toggled = await repo.toggle_availability(dish)
         assert dish.available is False
 
 

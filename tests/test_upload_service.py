@@ -1,5 +1,4 @@
 """Unit tests for UploadService using mocked S3 and image processing."""
-import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

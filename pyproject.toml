@@ -49,11 +49,9 @@ line-length = 100
 target-version = "py312"
 
 [tool.ruff.lint]
-# Lint set scoped to "real bugs" so style noise doesn't drown the signal.
-# Keep pyflakes (F) which catches unused imports / undefined names, and
-# bugbear (B) which catches likely-bug patterns. Style-only rules (E/W/I/UP)
-# are dropped because the original codebase has hundreds of pre-existing
-# violations and fixing them is not the point of Entrega 2.
+# Lint set scoped to "real bugs". Style-only rules (E/W/I/UP) are dropped
+# because the original codebase has hundreds of pre-existing violations
+# and fixing them is not the point of Entrega 2.
 select = [
     "F",   # pyflakes — actual bugs
     "B",   # bugbear — likely-bug patterns
@@ -62,6 +60,14 @@ ignore = [
     "E501",  # line too long (handled by formatter)
     "B008",  # function calls in argument defaults (FastAPI Depends pattern)
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files routinely have:
+#   * F401 — fixtures imported for their side effects (test discovery)
+#   * F841 — ``result = await ...`` to inspect during debugging
+#   * F811 — fixture overrides
+# These are noise in test code; bugs in tests still surface as real failures.
+"tests/**/*.py" = ["F401", "F841", "F811"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

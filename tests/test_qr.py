@@ -1,6 +1,4 @@
 """Tests for QR code generation endpoints and service."""
-from unittest.mock import patch
-
 import pytest
 from httpx import AsyncClient
 

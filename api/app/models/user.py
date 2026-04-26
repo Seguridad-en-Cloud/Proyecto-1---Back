@@ -3,12 +3,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.restaurant import Restaurant
+    from app.models.refresh_token import RefreshToken
 
 
 class User(Base):
@@ -36,13 +41,13 @@ class User(Base):
     )
     
     # Relationships
-    restaurant: Mapped["Restaurant"] = relationship(
+    restaurant: Mapped[Restaurant] = relationship(
         "Restaurant",
         back_populates="owner",
         uselist=False,
         cascade="all, delete-orphan"
     )
-    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+    refresh_tokens: Mapped[list[RefreshToken]] = relationship(
         "RefreshToken",
         back_populates="user",
         cascade="all, delete-orphan"

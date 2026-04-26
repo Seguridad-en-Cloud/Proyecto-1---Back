@@ -1,6 +1,5 @@
 """Unit tests for in-memory cache."""
 import time
-from unittest.mock import patch
 
 from app.core.cache import (
     cache_clear,

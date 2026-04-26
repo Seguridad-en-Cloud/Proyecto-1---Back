@@ -4,12 +4,16 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base
+
+if TYPE_CHECKING:
+    from app.models.category import Category
 
 
 class Dish(Base):
@@ -55,4 +59,4 @@ class Dish(Base):
     )
     
     # Relationships
-    category: Mapped["Category"] = relationship("Category", back_populates="dishes")
+    category: Mapped[Category] = relationship("Category", back_populates="dishes")

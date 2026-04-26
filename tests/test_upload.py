@@ -1,13 +1,12 @@
 """Tests for upload endpoints and service."""
 import io
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 
 from app.services.upload_service import (
     ALLOWED_CONTENT_TYPES,
-    MAX_SIZE_BYTES,
     _process_image_variant,
 )
 from app.core.storage import generate_object_key

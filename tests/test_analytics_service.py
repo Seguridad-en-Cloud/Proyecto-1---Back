@@ -1,7 +1,7 @@
 """Unit tests for AnalyticsService using mocked repositories."""
 import uuid
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -83,7 +83,7 @@ async def test_get_analytics_with_date_range(service):
 
     from_dt = datetime(2025, 1, 1)
     to_dt = datetime(2025, 1, 31)
-    result = await service.get_analytics(rest.owner_user_id, from_date=from_dt, to_date=to_dt)
+    await service.get_analytics(rest.owner_user_id, from_date=from_dt, to_date=to_dt)
     service.repo.get_total_scans.assert_awaited_once_with(rest.id, from_dt, to_dt)
 
 
