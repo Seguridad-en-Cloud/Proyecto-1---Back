@@ -1,28 +1,31 @@
-"""Request ID middleware to add unique ID to each request."""
+from starlette.types import ASGIApp, Receive, Scope, Send
 import uuid
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import Response
-
-
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Middleware to add unique request ID to each request."""
+class RequestIDMiddleware:
+    """Middleware to add unique request ID to each request using raw ASGI."""
     
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
-        """Process request and add request ID."""
-        # Get request ID from header or generate new one
-        request_id = request.headers.get("X-Request-Id", str(uuid.uuid4()))
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+
+        # Generate or get request ID
+        headers = dict(scope.get("headers", []))
+        request_id = headers.get(b"x-request-id", str(uuid.uuid4()).encode()).decode()
         
-        # Store in request state for access in other parts of the app
-        request.state.request_id = request_id
-        
-        # Process request
-        response = await call_next(request)
-        
-        # Add request ID to response headers
-        response.headers["X-Request-Id"] = request_id
-        
-        return response
+        # Add to scope for access in app
+        scope["request_id"] = request_id
+        if "state" not in scope:
+            scope["state"] = {}
+        scope["state"]["request_id"] = request_id
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"x-request-id", request_id.encode()))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
