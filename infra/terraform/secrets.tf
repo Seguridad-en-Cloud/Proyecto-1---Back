@@ -36,10 +36,21 @@ resource "google_project_service_identity" "secretmanager" {
   depends_on = [google_project_service.enabled]
 }
 
+# Wait for IAM propagation — google_project_service_identity returns as soon
+# as the SA *exists*, but its visibility to IAM-policy APIs lags ~10-30 s on
+# fresh projects. This sleep avoids the "service account does not exist"
+# error on the first ``terraform apply``.
+resource "time_sleep" "wait_secretmanager_identity" {
+  depends_on      = [google_project_service_identity.secretmanager]
+  create_duration = "30s"
+}
+
 resource "google_pubsub_topic_iam_member" "secretmanager_publisher" {
   topic  = google_pubsub_topic.secret_rotation.name
   role   = "roles/pubsub.publisher"
   member = "serviceAccount:${google_project_service_identity.secretmanager.email}"
+
+  depends_on = [time_sleep.wait_secretmanager_identity]
 }
 
 # ── Helper: factory for "rotating" secrets ───────────────────────────────
