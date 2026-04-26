@@ -36,14 +36,14 @@ async def _init_db_if_needed():
 
     if settings.cloud_sql_connection_name:
         try:
-            from google.cloud.sql.connector import Connector, IPTypes  # type: ignore
+            from google.cloud.sql.connector import create_async_connector, IPTypes  # type: ignore
         except ImportError as exc:
             raise RuntimeError(
                 "CLOUD_SQL_CONNECTION_NAME is set but cloud-sql-python-connector "
                 "is not installed."
             ) from exc
 
-        _connector = Connector()
+        _connector = await create_async_connector()
 
         async def _getconn():
             return await _connector.connect_async(
