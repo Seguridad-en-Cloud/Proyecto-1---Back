@@ -96,5 +96,5 @@ EOT
 variable "cors_origins" {
   description = "Comma-separated list of origins allowed by the API."
   type        = string
-  default     = "https://live-menu-cloud-sec.34.96.107.81.sslip.io"
+  default     = "https://live-menu-cloud-sec.34.96.107.81.sslip.io,https://34-96-107-81.nip.io"
 }
