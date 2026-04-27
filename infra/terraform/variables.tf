@@ -34,7 +34,7 @@ A managed Google certificate will be provisioned for it. Leave empty to use
 a sslip.io / nip.io domain derived from the LB IP for testing.
 EOT
   type        = string
-  default     = ""
+  default     = "live-menu-cloud-sec.34.96.107.81.sslip.io"
 }
 
 variable "db_tier" {
@@ -96,5 +96,5 @@ EOT
 variable "cors_origins" {
   description = "Comma-separated list of origins allowed by the API."
   type        = string
-  default     = "https://livemenu.example.com"
+  default     = "https://live-menu-cloud-sec.34.96.107.81.sslip.io"
 }
